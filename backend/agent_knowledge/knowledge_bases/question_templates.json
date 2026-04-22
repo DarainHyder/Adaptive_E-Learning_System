@@ -1,0 +1,85 @@
+{
+    "question_templates": [
+        {
+            "id": "code_output_prediction",
+            "pattern": "What is the output of the following Python code?\n\n```python\n{code_snippet}\n```",
+            "type": "multiple_choice",
+            "cognitive_level": "analyze",
+            "difficulty_modifiers": {
+                "beginner": "Single function call or operation",
+                "intermediate": "Nested calls or loops",
+                "advanced": "Decorators, generators, or subtle bugs"
+            },
+            "applicable_topics": [
+                "variables",
+                "loops",
+                "functions",
+                "classes"
+            ]
+        },
+        {
+            "id": "concept_definition",
+            "pattern": "Which of the following best describes {concept}?",
+            "type": "multiple_choice",
+            "cognitive_level": "remember",
+            "difficulty_modifiers": {
+                "beginner": "Direct definition",
+                "intermediate": "Distinguish from similar concept",
+                "advanced": "Nuanced application context"
+            },
+            "applicable_topics": [
+                "all"
+            ]
+        },
+        {
+            "id": "error_identification",
+            "pattern": "Identify the error in this code snippet:\n\n```python\n{code_snippet}\n```",
+            "type": "multiple_choice",
+            "cognitive_level": "evaluate",
+            "difficulty_modifiers": {
+                "beginner": "Syntax error",
+                "intermediate": "Logic error or runtime exception",
+                "advanced": "Memory leak or efficiency issue"
+            },
+            "applicable_topics": [
+                "syntax",
+                "exceptions",
+                "debugging"
+            ]
+        },
+        {
+            "id": "missing_code",
+            "pattern": "Fill in the blank to achieve {goal}:\n\n```python\ndef function(x):\n    return ______\n```",
+            "type": "fill_in_blank",
+            "cognitive_level": "apply",
+            "applicable_topics": [
+                "algorithms",
+                "logic"
+            ]
+        }
+    ],
+    "assessment_rubrics": {
+        "code_quality": {
+            "criteria": [
+                "Correctness",
+                "Efficiency",
+                "Readability",
+                "Style"
+            ],
+            "weights": {
+                "beginner": [
+                    0.6,
+                    0.1,
+                    0.2,
+                    0.1
+                ],
+                "advanced": [
+                    0.4,
+                    0.3,
+                    0.2,
+                    0.1
+                ]
+            }
+        }
+    }
+}

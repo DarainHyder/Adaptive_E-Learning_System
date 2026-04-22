@@ -1,0 +1,117 @@
+{
+    "strategies": [
+        {
+            "name": "scaffolding",
+            "description": "Gradual support reduction to build student independence.",
+            "best_for": {
+                "knowledge_level_max": 0.4,
+                "learning_style": [
+                    "visual",
+                    "kinesthetic"
+                ],
+                "struggling": true
+            },
+            "lesson_structure": {
+                "introduction": "hook_with_relatable_analogy",
+                "teaching": "step_by_step_guided_demo",
+                "practice": "heavily_supported_exercises",
+                "review": "summary_checklist"
+            },
+            "effectiveness_score": 0.85,
+            "usage_count": 0
+        },
+        {
+            "name": "inquiry_based",
+            "description": "Student-led discovery through questioning and exploration.",
+            "best_for": {
+                "knowledge_level_min": 0.6,
+                "learning_style": [
+                    "analytical",
+                    "reading"
+                ],
+                "struggling": false
+            },
+            "lesson_structure": {
+                "introduction": "open_ended_question_or_problem",
+                "teaching": "facilitated_exploration_resources",
+                "practice": "independent_investigation",
+                "review": "student_presentation_or_synthesis"
+            },
+            "effectiveness_score": 0.80,
+            "usage_count": 0
+        },
+        {
+            "name": "direct_instruction",
+            "description": "Explicit teaching of concepts/skills.",
+            "best_for": {
+                "knowledge_level_range": [
+                    0.0,
+                    1.0
+                ],
+                "topic_type": "factual",
+                "time_constrained": true
+            },
+            "lesson_structure": {
+                "introduction": "clear_learning_objectives",
+                "teaching": "lecture_with_examples",
+                "practice": "guided_and_independent_practice",
+                "review": "quiz_recitation"
+            },
+            "effectiveness_score": 0.75,
+            "usage_count": 0
+        },
+        {
+            "name": "practical_application",
+            "description": "Focus on real-world use cases and coding implementation.",
+            "best_for": {
+                "knowledge_level_range": [
+                    0.3,
+                    0.8
+                ],
+                "learning_style": [
+                    "pragmatic",
+                    "kinesthetic"
+                ]
+            },
+            "lesson_structure": {
+                "introduction": "industry_use_case",
+                "teaching": "code_along_session",
+                "practice": "build_mini_project",
+                "review": "code_review"
+            },
+            "effectiveness_score": 0.82,
+            "usage_count": 0
+        }
+    ],
+    "lesson_templates": {
+        "standard": {
+            "sections": [
+                "Introduction",
+                "Core Concepts",
+                "Examples",
+                "Practice",
+                "Summary"
+            ],
+            "word_count_target": 500
+        },
+        "micro_learning": {
+            "sections": [
+                "Quick Concept",
+                "One Example",
+                "Micro-Quiz"
+            ],
+            "word_count_target": 200
+        },
+        "deep_dive": {
+            "sections": [
+                "Context",
+                "Theory",
+                "Architecture",
+                "Implementation",
+                "Advanced Cases",
+                "Challenge"
+            ],
+            "word_count_target": 1000
+        }
+    }
+}

@@ -1,0 +1,76 @@
+{
+    "hint_strategies": [
+        {
+            "name": "socratic_questioning",
+            "hint_level": "subtle",
+            "description": "Ask guiding questions to lead student to answer.",
+            "conditions": {
+                "max_attempts": 1,
+                "frustration_level": [
+                    "low",
+                    "normal"
+                ]
+            },
+            "templates": [
+                "What do you think {variable_name} represents here?",
+                "How does {function_name} usually behave?",
+                "Have you checked the type of {variable}?",
+                "What is the condition for this loop to terminate?"
+            ],
+            "effectiveness_score": 0.78
+        },
+        {
+            "name": "conceptual_reminder",
+            "hint_level": "moderate",
+            "description": "Remind student of the underlying concept.",
+            "conditions": {
+                "min_attempts": 2,
+                "frustration_level": [
+                    "normal"
+                ]
+            },
+            "templates": [
+                "Remember that {concept} works by...",
+                "In Python, {feature} requires...",
+                "Check the syntax for {statement}."
+            ],
+            "effectiveness_score": 0.80
+        },
+        {
+            "name": "code_scaffold",
+            "hint_level": "moderate",
+            "description": "Provide a skeleton or structure of the solution.",
+            "conditions": {
+                "min_attempts": 2,
+                "complexity": "high"
+            },
+            "templates": [
+                "Try structuring your loop like this:\nfor item in collection:\n    if condition:\n        # do something",
+                "You might need a helper function here."
+            ]
+        },
+        {
+            "name": "direct_correction",
+            "hint_level": "detailed",
+            "description": "Point out the specific mistake and explain the fix.",
+            "conditions": {
+                "min_attempts": 3,
+                "frustration_level": [
+                    "high"
+                ]
+            },
+            "templates": [
+                "You are missing a colon at line {line_num}.",
+                "The variable {var} is not defined. Did you mean {similar_var}?",
+                "Indentation error: block is not aligned."
+            ],
+            "effectiveness_score": 0.85
+        }
+    ],
+    "motivational_quotes": [
+        "Mistakes are proof that you are trying.",
+        "Every expert was once a beginner.",
+        "Debugging is like being the detective in a crime movie where you are also the murderer.",
+        "Keep going, you're getting closer!"
+    ]
+}
