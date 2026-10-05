@@ -6,7 +6,7 @@ import KnowledgeGraph from './KnowledgeGraph'
 import { EmptyState, PageHeader, PageLoader, ProgressBar, SectionTitle, Stat, StatStrip, pct } from '../Common/ui'
 
 const reviewLabel = (t) => {
-  if (!t.practice_count) return <span className="text-fg-subtle">—</span>
+  if (!t.practice_count) return <span className="text-fg-subtle">Not started</span>
   if (t.due_for_review) return <span className="text-gold-300">Due now</span>
   return <span className="text-fg-subtle">in {Math.max(1, Math.round(t.days_until_review || 0))}d</span>
 }

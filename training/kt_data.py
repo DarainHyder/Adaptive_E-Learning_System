@@ -1,11 +1,11 @@
 """
 Datasets for knowledge tracing.
 
-1. ASSISTments 2009 / 2015 (real student data, standard DKVMN train/test splits) — used to
+1. ASSISTments 2009 / 2015 (real student data, standard DKVMN train/test splits), used to
    benchmark the architecture against published baselines.
-2. A curriculum-aligned learner simulator — generates interaction logs over the app's own
+2. A curriculum-aligned learner simulator that generates interaction logs over the app's own
    20-topic prerequisite graph, so the deployed model speaks the app's topic vocabulary.
-3. Real app logs exported from the backend database (QuizAttempt) — appended to (2) when
+3. Real app logs exported from the backend database (QuizAttempt), appended to (2) when
    available so the deployed model improves as people use the app.
 
 Every dataset is returned as a list of sequences; a sequence is a dict of equal-length
@@ -54,7 +54,7 @@ def _download(name, file):
 
 
 def _read_dkvmn(path):
-    """DKVMN format: 3 lines per student — length, skill ids (1-based), responses."""
+    """DKVMN format: 3 lines per student: length, skill ids (1-based), responses."""
     seqs = []
     with open(path) as f:
         lines = [l.strip().rstrip(',') for l in f if l.strip()]

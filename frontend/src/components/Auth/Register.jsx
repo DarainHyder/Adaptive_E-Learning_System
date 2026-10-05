@@ -7,9 +7,9 @@ import { Spinner } from '../Common/ui'
 
 const STYLES = [
   ['mixed', 'A bit of everything'],
-  ['visual', 'Visual — diagrams & examples'],
-  ['reading', 'Reading — detailed explanations'],
-  ['kinesthetic', 'Hands-on — coding exercises'],
+  ['visual', 'Visual: diagrams and examples'],
+  ['reading', 'Reading: detailed explanations'],
+  ['kinesthetic', 'Hands-on: coding exercises'],
 ]
 
 const Register = () => {

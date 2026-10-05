@@ -6,14 +6,14 @@
     {"difficulty": "intermediate", "concept": "operators", "question": "What is the value of 17 // 5 and 17 % 5 respectively?",
      "options": {"A": "3.4 and 2", "B": "3 and 2", "C": "3 and 3", "D": "4 and 2"}, "correct_answer": "B",
      "explanation": "// is floor division (17 // 5 = 3) and % gives the remainder (17 % 5 = 2)."},
-    {"difficulty": "advanced", "concept": "mutability", "question": "Given a = [1, 2]; b = a; b.append(3) — what is a?",
+    {"difficulty": "advanced", "concept": "mutability", "question": "Given a = [1, 2]; b = a; b.append(3). What is a?",
      "options": {"A": "[1, 2]", "B": "[1, 2, 3]", "C": "[3]", "D": "Error"}, "correct_answer": "B",
      "explanation": "b = a binds a second name to the same list object, so mutating b also changes a."}
   ],
   "control-flow": [
     {"difficulty": "beginner", "concept": "range()", "question": "How many times does `for i in range(2, 8):` loop?",
      "options": {"A": "8", "B": "7", "C": "6", "D": "5"}, "correct_answer": "C",
-     "explanation": "range(2, 8) yields 2, 3, 4, 5, 6, 7 — six values; the stop value is excluded."},
+     "explanation": "range(2, 8) yields 2, 3, 4, 5, 6, 7, which is six values; the stop value is excluded."},
     {"difficulty": "intermediate", "concept": "list comprehensions", "question": "What does [x * x for x in range(5) if x % 2 == 0] produce?",
      "options": {"A": "[0, 4, 16]", "B": "[1, 9]", "C": "[0, 1, 4, 9, 16]", "D": "[4, 16]"}, "correct_answer": "A",
      "explanation": "The even values 0, 2, 4 are kept and squared: [0, 4, 16]."},

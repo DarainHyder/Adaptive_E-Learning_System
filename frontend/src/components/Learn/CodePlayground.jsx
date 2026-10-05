@@ -106,7 +106,7 @@ const CodePlayground = ({ topicName, topicId, seed }) => {
             <p className="eyebrow">Output</p>
             {result && (
               <span className={`text-xs ${result.error ? 'text-bad' : matches ? 'text-ok' : 'text-fg-subtle'}`}>
-                {result.error ? 'Error' : matches ? 'Matches expected output' : practice ? 'Ran — output differs' : 'Ran successfully'}
+                {result.error ? 'Error' : matches ? 'Matches expected output' : practice ? 'Ran, but the output differs' : 'Ran successfully'}
               </span>
             )}
           </div>

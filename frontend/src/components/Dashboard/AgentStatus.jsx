@@ -42,7 +42,7 @@ const AgentStatus = ({ status }) => {
                   <td className="px-5 py-3 text-fg"><span className="flex items-center gap-2.5"><StateDot state={a.state} />{name}</span></td>
                   <td className="px-5 py-3 text-fg-subtle">{role}</td>
                   <td className="px-5 py-3 tabular-nums text-fg-muted">{a.runs ?? 0}</td>
-                  <td className="px-5 py-3 tabular-nums text-fg-muted">{a.runs ? `${a.avg_latency_ms} ms` : '—'}</td>
+                  <td className="px-5 py-3 tabular-nums text-fg-muted">{a.runs ? `${a.avg_latency_ms} ms` : 'n/a'}</td>
                 </tr>
               )
             })}

@@ -3,7 +3,7 @@ AssessmentAgent
   decide (plan_quiz):   choose quiz length and difficulty mix so predicted success ~= target
                         ("desirable difficulty"), using the KT model's per-difficulty predictions
   act (assemble_quiz):  draw questions from the bank (no LLM), preferring unseen, well-calibrated items
-  generate_questions:   only when the bank runs short — ONE structured LLM call, validated + deduplicated,
+  generate_questions:   only when the bank runs short: ONE structured LLM call, validated + deduplicated,
                         then loop back to assemble (a LangGraph cycle, max 2 rounds)
   finalize_quiz:        top-up from already-seen items if still short, then build the payload
 """

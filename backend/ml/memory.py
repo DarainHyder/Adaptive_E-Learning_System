@@ -2,7 +2,7 @@
 Forgetting model used for spaced repetition.
 
 Recall probability decays exponentially, R = exp(-days / S), where the memory
-stability S (in days) grows with successful practice and mastery — the same shape as
+stability S (in days) grows with successful practice and mastery, the same shape as
 half-life regression (Settles & Meeder, 2016) with hand-set coefficients.
 
 Forgetting is applied at *read* time to produce an "effective" mastery; it is never

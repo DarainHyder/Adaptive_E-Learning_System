@@ -1,14 +1,14 @@
 """
 Knowledge-tracing models.
 
-KTTransformer — causal transformer over interaction tokens
+KTTransformer: causal transformer over interaction tokens
   token_t = E[topic_t × response_t] + E[topic_t] + E[difficulty_t] + E[response_t] + E[gap_t] + E[pos_t]
   h_t     = causal self-attention encoder (pre-LN, SDPA, GELU MLP)
   p(correct at t+1 | query q) = sigmoid(MLP([h_t ; E_q[topic_q] + E_q[difficulty_q]]))
 The query head lets one forward pass score *every* (topic, difficulty) pair for the
 dashboard, and generalises SAKT/DKT-style heads.
 
-DKT — Piech et al. (2015) LSTM baseline with the classic per-skill output layer.
+DKT: Piech et al. (2015) LSTM baseline with the classic per-skill output layer.
 """
 import torch
 import torch.nn as nn
