@@ -13,6 +13,18 @@ pinned: false
 Adaptive tutoring that models what each learner knows, teaches at their level, and brings topics
 back just before they are forgotten.
 
+> [!WARNING]
+> **Portfolio project, not a production service.** The live demo exists to showcase the project.
+>
+> - **Limited AI in the live demo:** the demo's Gemini API quota has run out, so AI-written lessons,
+>   hints and tutor replies fall back to built-in content (quizzes, the learner model and
+>   recommendations work fully). For the full experience, clone this repo, add your own
+>   `GEMINI_API_KEY` (free at [Google AI Studio](https://aistudio.google.com/apikey)) and run or deploy it
+>   yourself (see [Running locally](#running-locally) and [Deployment](#deployment)).
+> - **No persistent data:** the backend runs on Hugging Face's free tier, so accounts and progress may be
+>   reset whenever the Space restarts or goes to sleep after inactivity. The first request after a quiet
+>   period can take about 30 seconds while the server wakes up.
+
 - **Frontend**: React + Vite + Tailwind (Vercel), at https://adaptive-e-learning-system.vercel.app
 - **Backend**: Flask API on a Hugging Face Space (Docker)
 - **Agents**: LangGraph multi-agent graph with LangChain structured outputs (Gemini)

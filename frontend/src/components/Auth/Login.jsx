@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import AuthLayout, { Field } from './AuthLayout'
 import { Spinner } from '../Common/ui'
+import DemoNotice from './DemoNotice'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -42,6 +43,7 @@ const Login = () => {
           {loading ? <Spinner /> : <>Sign in <ArrowRight className="h-4 w-4" /></>}
         </button>
       </form>
+      <DemoNotice />
     </AuthLayout>
   )
 }
