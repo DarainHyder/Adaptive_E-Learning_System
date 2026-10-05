@@ -1,7 +1,8 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://sawabedarain-adaptive-elearning-backend.hf.space' : 'http://localhost:7860')
 const TOKEN_KEY = 'elearn_token'
 
 export const tokenStore = {
