@@ -17,7 +17,9 @@ export const tokenStore = {
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
+  // No cookies: auth is a Bearer token. (The HF Spaces proxy answers CORS preflights without
+  // Access-Control-Allow-Credentials, so credentialed requests would be blocked by the browser.)
+  withCredentials: false,
   timeout: 120000,
 })
 
