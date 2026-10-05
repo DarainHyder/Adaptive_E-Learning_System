@@ -1,32 +1,26 @@
-FROM python:3.10-slim
+# Hugging Face Space image (sdk: docker, app_port: 7860). Serves the Flask API in backend/.
+FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PORT 7860
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PORT=7860
 
+# HF Spaces run containers as uid 1000
+RUN useradd -m -u 1000 user
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install -r /app/backend/requirements.txt
 
-# Copy requirements from backend and install
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=user backend /app/backend
+RUN mkdir -p /app/data && chown -R user /app/data
 
-# Copy the entire project
-COPY . .
-
-# Create data directory
-RUN mkdir -p /app/data
-
-# Final working directory for the app
+USER user
 WORKDIR /app/backend
-
-# Expose port
 EXPOSE 7860
 
-# Run the backend app
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "120", "--workers", "1", "app:app"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/api/health')"
+
+# One process (the DB seeding and the in-process metrics assume it); threads for concurrency.
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "1", "--threads", "8", "--worker-class", "gthread", "--timeout", "180", "app:app"]

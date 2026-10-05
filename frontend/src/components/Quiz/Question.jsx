@@ -1,165 +1,66 @@
 import React from 'react'
-import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Check, X } from 'lucide-react'
+import Markdown from '../Common/Markdown'
+import { DifficultyTag, ProgressBar, Spinner, pct } from '../Common/ui'
 
-const Question = ({ question, questionNumber, selectedAnswer, onAnswer, showResult, result }) => {
-  const options = ['A', 'B', 'C', 'D']
+const LETTERS = ['A', 'B', 'C', 'D']
 
-  const getOptionStyle = (option) => {
+const Question = ({ question, selectedAnswer, onAnswer, showResult, result, pending }) => {
+  const correct = result?.correct_answer
+
+  const styleFor = (opt) => {
     if (!showResult) {
-      return selectedAnswer === option
-        ? 'border-primary-500 bg-primary-50 ring-4 ring-primary-100'
-        : 'border-slate-200 hover:border-primary-300 hover:bg-primary-50'
+      return selectedAnswer === opt ? 'border-gold-500/60 bg-gold-400/[0.06]' : 'border-ink-700 hover:border-ink-600 hover:bg-ink-850'
     }
-
-    // Show results
-    if (option === question.correct_answer) {
-      return 'border-green-500 bg-green-50 ring-4 ring-green-100'
-    }
-    
-    if (option === selectedAnswer && option !== question.correct_answer) {
-      return 'border-red-500 bg-red-50 ring-4 ring-red-100'
-    }
-
-    return 'border-slate-200 opacity-50'
-  }
-
-  const getOptionIcon = (option) => {
-    if (!showResult) return null
-
-    if (option === question.correct_answer) {
-      return <CheckCircle className="w-6 h-6 text-green-600" />
-    }
-
-    if (option === selectedAnswer && option !== question.correct_answer) {
-      return <XCircle className="w-6 h-6 text-red-600" />
-    }
-
-    return null
+    if (opt === correct) return 'border-ok/60 bg-ok/[0.07]'
+    if (opt === selectedAnswer) return 'border-bad/60 bg-bad/[0.07]'
+    return 'border-ink-700/60 opacity-50'
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="card"
-    >
-      {/* Question Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-            {questionNumber}
-          </div>
-          <div className="flex-1">
-            <h3 className="text-2xl font-bold text-slate-800">
-              {question.question}
-            </h3>
-            {question.difficulty && (
-              <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                question.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
-                question.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {question.difficulty}
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="animate-fade-up">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        {question.difficulty && <DifficultyTag level={question.difficulty} />}
+        {question.concept && <span className="chip">{question.concept}</span>}
+      </div>
+      <div className="display text-3xl leading-snug [&_.markdown]:text-fg [&_.markdown]:leading-snug">
+        <Markdown>{question.question}</Markdown>
       </div>
 
-      {/* Options */}
-      <div className="space-y-3">
-        {options.map((option, index) => (
-          <motion.button
-            key={option}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: showResult ? 1 : 1.02 }}
-            whileTap={{ scale: showResult ? 1 : 0.98 }}
-            onClick={() => !showResult && onAnswer(option)}
-            disabled={showResult}
-            className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center gap-4 ${getOptionStyle(option)} ${
-              showResult ? 'cursor-default' : 'cursor-pointer'
-            }`}
-          >
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0 ${
-              showResult && option === question.correct_answer
-                ? 'bg-green-600 text-white'
-                : showResult && option === selectedAnswer
-                  ? 'bg-red-600 text-white'
-                  : selectedAnswer === option
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-100 text-slate-700'
-            }`}>
-              {option}
-            </div>
-            
-            <span className="flex-1 font-medium text-slate-800">
-              {question.options[option]}
+      <div className="mt-8 space-y-3">
+        {LETTERS.map((opt) => (
+          <button key={opt} onClick={() => !showResult && !pending && onAnswer(opt)} disabled={showResult || pending}
+            className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-colors ${styleFor(opt)} ${showResult ? 'cursor-default' : ''}`}>
+            <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border font-mono text-xs ${
+              showResult && opt === correct ? 'border-ok/60 text-ok'
+                : showResult && opt === selectedAnswer ? 'border-bad/60 text-bad'
+                  : selectedAnswer === opt ? 'border-gold-500/60 text-gold-300' : 'border-ink-600 text-fg-subtle'}`}>
+              {opt}
             </span>
-
-            {getOptionIcon(option)}
-          </motion.button>
+            <span className="flex-1 text-[15px] text-fg">{question.options[opt]}</span>
+            {pending && selectedAnswer === opt && <Spinner className="h-4 w-4 text-gold-400" />}
+            {showResult && opt === correct && <Check className="h-4 w-4 text-ok" />}
+            {showResult && opt === selectedAnswer && opt !== correct && <X className="h-4 w-4 text-bad" />}
+          </button>
         ))}
       </div>
 
-      {/* Explanation */}
-      {showResult && result && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          transition={{ delay: 0.3 }}
-          className={`mt-6 p-4 rounded-xl border-l-4 ${
-            result.is_correct
-              ? 'bg-green-50 border-green-500'
-              : 'bg-red-50 border-red-500'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            {result.is_correct ? (
-              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1">
-              <h4 className={`font-bold mb-2 ${
-                result.is_correct ? 'text-green-900' : 'text-red-900'
-              }`}>
-                {result.is_correct ? 'Correct!' : 'Incorrect'}
-              </h4>
-              <p className={`text-sm ${
-                result.is_correct ? 'text-green-800' : 'text-red-800'
-              }`}>
-                {result.explanation}
-              </p>
-              
-              {result.new_knowledge_level !== undefined && (
-                <div className="mt-3 pt-3 border-t border-current/20">
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span>Knowledge Level Updated</span>
-                    <span>{Math.round(result.new_knowledge_level * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${result.new_knowledge_level * 100}%` }}
-                      transition={{ delay: 0.5, duration: 0.8 }}
-                      className={`h-full rounded-full ${
-                        result.is_correct
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                          : 'bg-gradient-to-r from-red-500 to-orange-500'
-                      }`}
-                    />
-                  </div>
-                </div>
-              )}
+      {showResult && (
+        <div className="mt-6 rounded-xl border border-ink-700/70 bg-ink-900 p-5 animate-fade-up">
+          <p className={`text-sm font-medium ${result.is_correct ? 'text-ok' : 'text-bad'}`}>
+            {result.is_correct ? 'Correct' : `Not quite. The answer is ${correct}.`}
+          </p>
+          {result.explanation && <Markdown className="mt-2 text-sm">{result.explanation}</Markdown>}
+          {result.new_knowledge_level !== undefined && (
+            <div className="mt-5 flex items-center gap-4">
+              <span className="text-xs text-fg-subtle">Mastery</span>
+              <div className="flex-1"><ProgressBar value={result.new_knowledge_level} /></div>
+              <span className="w-10 text-right text-xs tabular-nums text-fg-muted">{pct(result.new_knowledge_level)}</span>
             </div>
-          </div>
-        </motion.div>
+          )}
+        </div>
       )}
-    </motion.div>
+    </div>
   )
 }
 

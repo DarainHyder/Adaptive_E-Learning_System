@@ -1,240 +1,130 @@
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Play, HelpCircle, CheckCircle, XCircle, Code } from 'lucide-react'
-import { learningAPI } from '../../services/api'
+import React, { useEffect, useState } from 'react'
+import { Lightbulb, Play, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { learningAPI } from '../../services/api'
+import { Spinner } from '../Common/ui'
 
-const CodePlayground = ({ topicName }) => {
-  const [code, setCode] = useState('# Write your Python code here\nprint("Hello, World!")')
-  const [output, setOutput] = useState('')
+const DEFAULT_CODE = '# Write your Python code here\nprint("Hello, world!")\n'
+
+const CodePlayground = ({ topicName, topicId, seed }) => {
+  const [code, setCode] = useState(DEFAULT_CODE)
+  const [practice, setPractice] = useState(null)
+  const [result, setResult] = useState(null) // { output, error }
   const [running, setRunning] = useState(false)
-  const [error, setError] = useState(false)
-  const [hint, setHint] = useState('')
-  const [gettingHint, setGettingHint] = useState(false)
-  const [attemptCount, setAttemptCount] = useState(0)
+  const [hint, setHint] = useState(null)
+  const [hinting, setHinting] = useState(false)
+  const [attempts, setAttempts] = useState(0)
 
-  const handleRunCode = async () => {
+  // Load code sent from the lesson ("Run in playground" / "Start the challenge")
+  useEffect(() => {
+    if (!seed) return
+    setCode(seed.code)
+    setPractice(seed.practice || null)
+    setResult(null)
+    setHint(null)
+    setAttempts(0)
+  }, [seed])
+
+  const run = async () => {
     setRunning(true)
-    setOutput('')
-    setError(false)
-    setAttemptCount(prev => prev + 1)
-
+    setAttempts((a) => a + 1)
     try {
-      const response = await learningAPI.checkCode(code)
-      
-      if (response.data.success) {
-        setOutput(response.data.output)
-        setError(false)
-        if (!response.data.error) {
-          toast.success('Code executed successfully!')
-        }
-      } else {
-        setOutput(response.data.output)
-        setError(true)
-      }
-    } catch (err) {
-      setOutput('Failed to execute code')
-      setError(true)
+      const r = await learningAPI.checkCode(code)
+      setResult({ output: r.data.output, error: !!r.data.error })
+    } catch {
+      setResult({ output: 'Could not reach the code runner.', error: true })
     } finally {
       setRunning(false)
     }
   }
 
-  const handleGetHint = async () => {
-    setGettingHint(true)
-
+  const askHint = async () => {
+    setHinting(true)
     try {
-      const response = await learningAPI.askHint({
-        question: `I'm trying to practice ${topicName}`,
+      const r = await learningAPI.askHint({
+        topic_id: topicId,
+        question: practice?.prompt || `Practising ${topicName}`,
         challenge: code,
-        attempt_count: attemptCount
+        last_output: result?.output,
+        practice_hints: practice?.hints || [],
+        attempt_count: Math.max(1, attempts),
       })
-
-      setHint(response.data.hint)
-    } catch (err) {
-      toast.error('Failed to get hint')
+      setHint(r.data)
+    } catch {
+      toast.error('Could not get a hint')
     } finally {
-      setGettingHint(false)
+      setHinting(false)
     }
   }
 
-  const handleClearCode = () => {
-    setCode('# Write your Python code here\nprint("Hello, World!")')
-    setOutput('')
-    setError(false)
-    setHint('')
-    setAttemptCount(0)
+  const onKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); run() }
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const { selectionStart: s, selectionEnd: end } = e.target
+      setCode(code.slice(0, s) + '    ' + code.slice(end))
+      requestAnimationFrame(() => { e.target.selectionStart = e.target.selectionEnd = s + 4 })
+    }
   }
 
+  const matches = practice?.expected_output && result && !result.error &&
+    result.output.trim() === String(practice.expected_output).trim()
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="card"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <section className="card p-0 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-700/70 px-5 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-            <Code className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">
-              Practice Playground
-            </h2>
-            <p className="text-sm text-slate-600">
-              Try out what you've learned
-            </p>
-          </div>
+          <span className="flex gap-1.5">{[0, 1, 2].map((i) => <span key={i} className="h-2.5 w-2.5 rounded-full bg-ink-700" />)}</span>
+          <span className="font-mono text-xs text-fg-subtle">main.py</span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleGetHint}
-            disabled={gettingHint}
-            className="btn-secondary flex items-center gap-2"
-          >
-            {gettingHint ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
-            ) : (
-              <HelpCircle className="w-4 h-4" />
-            )}
-            Get Hint
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleClearCode}
-            className="px-4 py-2 rounded-xl border-2 border-slate-200 hover:border-slate-300 font-semibold text-slate-700 transition-all"
-          >
-            Clear
-          </motion.button>
+        <div className="flex items-center gap-4">
+          <button onClick={askHint} disabled={hinting} className="btn-ghost text-xs">
+            {hinting ? <Spinner className="h-3 w-3" /> : <Lightbulb className="h-3.5 w-3.5" />} Hint
+          </button>
+          <button onClick={() => { setCode(practice?.starter_code || DEFAULT_CODE); setResult(null) }} className="btn-ghost text-xs">
+            <RotateCcw className="h-3.5 w-3.5" /> Reset
+          </button>
+          <button onClick={run} disabled={running} className="btn-primary px-4 py-1.5 text-xs">
+            {running ? <Spinner className="h-3 w-3" /> : <Play className="h-3.5 w-3.5" />} Run
+          </button>
         </div>
       </div>
 
-      {/* Hint Display */}
-      <AnimatePresence>
-        {hint && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg"
-          >
-            <div className="flex items-start gap-3">
-              <HelpCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-blue-900 mb-1">AI Tutor Hint</h4>
-                <p className="text-sm text-blue-800">{hint}</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Code Editor */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Editor */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Code Editor
-          </label>
-          <div className="relative">
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-80 p-4 bg-slate-900 text-green-400 font-mono text-sm rounded-xl border-2 border-slate-700 focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none resize-none"
-              spellCheck="false"
-            />
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleRunCode}
-            disabled={running}
-            className="mt-4 w-full btn-primary flex items-center justify-center gap-2"
-          >
-            {running ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5" />
-                Run Code
-              </>
-            )}
-          </motion.button>
+      {practice && (
+        <div className="border-b border-ink-700/70 bg-ink-850 px-5 py-3 text-sm text-fg-muted">
+          <span className="text-fg">Challenge</span> · {practice.prompt}
+          <span className="ml-2 text-fg-subtle">Expected: <code className="inline-code">{practice.expected_output}</code></span>
         </div>
+      )}
 
-        {/* Output */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Output
-          </label>
-          <div className={`h-80 p-4 rounded-xl border-2 overflow-auto ${
-            error 
-              ? 'bg-red-50 border-red-200' 
-              : output 
-                ? 'bg-green-50 border-green-200'
-                : 'bg-slate-50 border-slate-200'
-          }`}>
-            {output ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 mb-3">
-                  {error ? (
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  )}
-                  <span className={`font-semibold ${error ? 'text-red-700' : 'text-green-700'}`}>
-                    {error ? 'Error' : 'Success'}
-                  </span>
-                </div>
-                <pre className={`font-mono text-sm whitespace-pre-wrap ${
-                  error ? 'text-red-800' : 'text-green-800'
-                }`}>
-                  {output}
-                </pre>
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-400">
-                <div className="text-center">
-                  <Play className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Run your code to see output</p>
-                </div>
-              </div>
+      <div className="grid lg:grid-cols-2">
+        <textarea value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={onKeyDown} spellCheck="false"
+          aria-label="Code editor"
+          className="min-h-[300px] resize-y border-ink-700/70 bg-ink-950 p-5 font-mono text-[13px] leading-6 text-fg outline-none lg:border-r" />
+        <div className="min-h-[300px] border-t border-ink-700/70 bg-ink-950 p-5 lg:border-t-0">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="eyebrow">Output</p>
+            {result && (
+              <span className={`text-xs ${result.error ? 'text-bad' : matches ? 'text-ok' : 'text-fg-subtle'}`}>
+                {result.error ? 'Error' : matches ? 'Matches expected output' : practice ? 'Ran — output differs' : 'Ran successfully'}
+              </span>
             )}
           </div>
-
-          {attemptCount > 0 && (
-            <div className="mt-4 text-sm text-slate-600 text-center">
-              Attempts: {attemptCount}
-            </div>
+          {result ? (
+            <pre className={`whitespace-pre-wrap font-mono text-[13px] leading-6 ${result.error ? 'text-bad' : 'text-fg-muted'}`}>{result.output}</pre>
+          ) : (
+            <p className="text-sm text-fg-subtle">Run your code to see output. <span className="font-mono text-xs">Ctrl/⌘ + Enter</span></p>
           )}
         </div>
       </div>
 
-      {/* Tips */}
-      <div className="mt-6 p-4 bg-primary-50 rounded-xl border border-primary-100">
-        <h4 className="font-semibold text-primary-900 mb-2 flex items-center gap-2">
-          <HelpCircle className="w-4 h-4" />
-          Playground Tips
-        </h4>
-        <ul className="text-sm text-primary-800 space-y-1">
-          <li>• Try modifying the examples from the lesson</li>
-          <li>• Experiment with different inputs and outputs</li>
-          <li>• Use the "Get Hint" button if you're stuck</li>
-          <li>• Practice makes perfect - don't be afraid to make mistakes!</li>
-        </ul>
-      </div>
-    </motion.div>
+      {hint && (
+        <div className="border-t border-ink-700/70 px-5 py-4 text-sm animate-fade-up">
+          <p className="eyebrow mb-2 text-gold-400/80">Tutor hint · {hint.hint_level}</p>
+          <p className="whitespace-pre-wrap leading-6 text-fg-muted">{hint.hint}</p>
+        </div>
+      )}
+    </section>
   )
 }
 

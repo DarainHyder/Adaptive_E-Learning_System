@@ -1,126 +1,60 @@
 """
-Tutor Agent - Autonomous assistance and motivation
+TutorAgent
+  provide_hint: hint ladder (socratic -> conceptual -> direct) chosen by expert rules from the
+                attempt count, phrased by the LLM with the learner's code, output and mastery as context.
 """
-import json
-from .base_agent import BaseAgent
-from llm_service import LLMService
-from agent_knowledge.rules.tutor_rules import TutorRuleEngine
-from datetime import datetime
+from langchain_core.messages import HumanMessage, SystemMessage
 
-class TutorAgent(BaseAgent):
-    """
-    Autonomous agent responsible for:
-    - Providing hints
-    - Answering questions
-    - Motivational support
-    - Adaptive guidance
-    """
-    
-    def __init__(self):
-        super().__init__("TUA-001", "TutorAgent")
-        self.llm_service = LLMService()
-        self.rule_engine = TutorRuleEngine()
-        self.hints_provided = 0
-        self.questions_answered = 0
-        self.motivation_level = "neutral"
-        self.strategy = None # To store the selected strategy
-        
-    def perceive(self, student_state, context=None):
-        """
-        Perceive student's help needs
-        
-        Args:
-            student_state: object with student's current state (e.g., frustration_level)
-            context: dict with additional context (e.g., 'attempts')
-        """
-        self.update_state("perceiving")
-        self.log(f"Perceiving student state. Frustration: {getattr(student_state, 'frustration_level', 'N/A')}")
-        
-        # Context might contain recent quiz attempts, time taken, etc.
-        self.frustration_level = getattr(student_state, 'frustration_level', 'low')
-        # Simulate attempts count or get from context
-        self.attempts = context.get('attempts', 1) if context else 1
-        
-        return self
-    
-    def decide(self):
-        """
-        Autonomous decisions:
-        - How much help to provide?
-        - What teaching approach?
-        - Level of motivation needed?
-        """
-        self.update_state("deciding")
-        
-        # Determine hint strategy
-        self.strategy = self.rule_engine.select_hint_strategy(
-            self.attempts, self.frustration_level
-        )
-        
-        self.log(f"Decided strategy: {self.strategy['name'] if self.strategy else 'default'}")
-        
-        return self
-    
-    def act(self, prompt=None):
-        """
-        Execute: Provide intelligent hint or answer based on the decided strategy
-        """
-        self.update_state("acting")
-        self.log(f"Providing help with strategy: {self.strategy['name'] if self.strategy else 'default'}")
-        
-        try:
-            
-            self.update_state("completed")
-            
-            return {
-                "hint": response,
-                "hint_level": self.hint_level,
-                "motivation": self.motivation_level,
-                "agent": self.name,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            
-        except Exception as e:
-            self.log(f"Error generating hint: {str(e)}", "error")
-            self.update_state("error")
-            return {
-                "hint": "Think about what you've learned. Break the problem into smaller steps!",
-                "agent": self.name
-            }
-    
-    def provide_motivation(self, user_performance):
-        """
-        Autonomous motivational message based on performance
-        """
-        self.update_state("motivating")
-        
-        score = user_performance.get('score', 0)
-        improvement = user_performance.get('improvement', 0)
-        
-        if score >= 0.8:
-            message = "🌟 Excellent work! You're mastering this topic. Ready for a challenge?"
-        elif score >= 0.6:
-            message = "👍 Good progress! Keep practicing and you'll get there."
-        elif improvement > 0.1:
-            message = "📈 Great improvement! Your hard work is paying off."
+from models import Topic, db
+
+from .metrics import tracked
+from .schemas import Hint
+
+LEVEL_INSTRUCTIONS = {
+    'subtle': 'Do NOT give the solution. Ask one guiding question and point at where to look.',
+    'moderate': 'Explain the underlying concept and outline the approach, but do not write the full solution.',
+    'detailed': 'Point out the specific mistake and show the minimal fix with a short code fragment.',
+}
+
+
+def make_nodes(ctx):
+    @tracked('tutor')
+    def provide_hint(state):
+        req = state.get('request', {})
+        attempts = max(1, int(req.get('attempt_count') or 1))
+        strategy = ctx.tutor_rules.select_hint_strategy(attempts, req.get('frustration_level', 'normal')) or {}
+        level = strategy.get('hint_level', 'moderate')
+        topic = db.session.get(Topic, state['topic_id']) if state.get('topic_id') else None
+        tp = state['profile']['topics'].get(state.get('topic_id'), {}) if topic else {}
+
+        messages = [
+            SystemMessage('You are a patient, encouraging programming tutor. Keep hints to 2-4 sentences.'),
+            HumanMessage(
+                f"Topic: {topic.name if topic else 'general programming'} "
+                f"(learner mastery {tp.get('effective_mastery', 0):.0%}).\n"
+                f"Exercise / question: {req.get('question') or 'free practice'}\n"
+                f"Learner's code:\n```python\n{(req.get('challenge') or '')[:4000]}\n```\n"
+                f"Last output or error: {(req.get('last_output') or 'n/a')[:1500]}\n"
+                f"Attempt number: {attempts}. Hint strategy: {strategy.get('name', 'conceptual_reminder')}.\n"
+                f"{LEVEL_INSTRUCTIONS[level]}"
+            ),
+        ]
+        result = ctx.llm.structured(Hint, messages)
+        if result is not None:
+            text = result.hint + (f"\n\n{result.guiding_question}" if result.guiding_question else '')
+            source = 'llm'
         else:
-            message = "💪 Don't give up! Every expert was once a beginner. Take it one step at a time."
-        
-        self.log(f"Motivation provided for score {score}")
-        
-        return {
-            "message": message,
-            "agent": self.name,
-            "tone": "encouraging"
-        }
-    
-    def get_statistics(self):
-        """Return agent statistics"""
-        return {
-            "agent": self.name,
-            "hints_provided": self.hints_provided,
-            "questions_answered": self.questions_answered,
-            "current_motivation_level": self.motivation_level,
-            "state": self.state,
-            "memory_size": len(self.memory)
-        }
+            lesson_hints = req.get('practice_hints') or []
+            if lesson_hints:
+                text = lesson_hints[min(attempts, len(lesson_hints)) - 1]
+            else:
+                concept = (topic.key_concepts or [topic.name])[0] if topic else 'the core idea'
+                text = {'subtle': f'What should the program print first? Trace your code line by line and check how it uses {concept}.',
+                        'moderate': f'Revisit {concept}: write down the steps in plain words, then translate each step into one line of code.',
+                        'detailed': 'Run a tiny version of the problem, print every intermediate value, and compare it with the expected output to locate the first line that differs.'}[level]
+            source = 'rules'
+        return {'hint': {'hint': text, 'hint_level': level, 'strategy': strategy.get('name'),
+                         'motivation': ctx.tutor_rules.get_motivational_quote(),
+                         'agent': 'TutorAgent', 'source': source}}
+
+    return {'provide_hint': provide_hint}

@@ -1,115 +1,74 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Brain, 
-  TrendingUp, 
-  Sparkles 
-} from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LayoutGrid, BookOpen, CircleDot, LineChart, LogOut, X } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
 
-const Sidebar = ({ isOpen }) => {
-  const navItems = [
-    { 
-      path: '/', 
-      icon: LayoutDashboard, 
-      label: 'Dashboard',
-      gradient: 'from-blue-500 to-cyan-500'
-    },
-    { 
-      path: '/learn', 
-      icon: BookOpen, 
-      label: 'Learn',
-      gradient: 'from-purple-500 to-pink-500'
-    },
-    { 
-      path: '/quiz', 
-      icon: Brain, 
-      label: 'Quiz',
-      gradient: 'from-green-500 to-emerald-500'
-    },
-    { 
-      path: '/progress', 
-      icon: TrendingUp, 
-      label: 'Progress',
-      gradient: 'from-orange-500 to-red-500'
-    },
-  ]
+const NAV = [
+  { path: '/', icon: LayoutGrid, label: 'Overview', end: true },
+  { path: '/learn', icon: BookOpen, label: 'Learn' },
+  { path: '/quiz', icon: CircleDot, label: 'Practice' },
+  { path: '/progress', icon: LineChart, label: 'Progress' },
+]
+
+export const Wordmark = () => (
+  <span className="flex items-center gap-2.5">
+    <span className="h-2 w-2 rounded-full bg-gold-400 shadow-[0_0_12px_rgba(221,179,106,0.6)]" />
+    <span className="font-serif text-2xl tracking-tight text-fg">Adaptive</span>
+  </span>
+)
+
+const Sidebar = ({ open, onClose }) => {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.aside
-          initial={{ x: -300 }}
-          animate={{ x: 0 }}
-          exit={{ x: -300 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed lg:sticky top-0 left-0 h-screen w-64 glass-effect border-r border-white/20 z-50 flex flex-col"
-        >
-          {/* Logo */}
-          <div className="p-6 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-lg gradient-text">
-                  AdaptiveLearn
-                </h2>
-                <p className="text-xs text-slate-500">Multi-Agent AI</p>
-              </div>
-            </div>
-          </div>
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={onClose} />}
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-ink-800 bg-ink-950 px-4 py-6
+        transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="mb-10 flex items-center justify-between px-3">
+          <Wordmark />
+          <button onClick={onClose} className="text-fg-subtle hover:text-fg lg:hidden" aria-label="Close menu">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navItems.map((item, index) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
-                    isActive
-                      ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg'
-                      : 'hover:bg-white/50 text-slate-700'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <motion.div
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center gap-3 w-full"
-                  >
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : `bg-gradient-to-br ${item.gradient}`}`}>
-                      <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white'}`} />
-                    </div>
-                    <span className="font-semibold">{item.label}</span>
-                  </motion.div>
-                )}
-              </NavLink>
-            ))}
-          </nav>
+        <nav className="flex-1 space-y-1">
+          {NAV.map(({ path, icon: Icon, label, end }) => (
+            <NavLink key={path} to={path} end={end} onClick={onClose}
+              className={({ isActive }) => `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                isActive ? 'bg-ink-850 text-fg' : 'text-fg-muted hover:bg-ink-900 hover:text-fg'}`}>
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-[18px] w-[18px] ${isActive ? 'text-gold-400' : 'text-fg-subtle group-hover:text-fg-muted'}`} strokeWidth={1.75} />
+                  {label}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
 
-          {/* AI Agent Status */}
-          <div className="p-4 border-t border-white/10">
-            <div className="bg-gradient-to-r from-primary-500/10 to-accent-500/10 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-semibold text-slate-700">
-                  AI Agents Active
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                5 agents monitoring your learning
-              </p>
+        <div className="mt-6 border-t border-ink-800 pt-5">
+          <div className="flex items-center gap-3 px-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-ink-700 bg-ink-850 font-serif text-lg text-gold-300">
+              {user?.username?.[0]?.toUpperCase() || '·'}
             </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm text-fg">{user?.username}</p>
+              <p className="truncate text-xs capitalize text-fg-subtle">{user?.learning_style || 'mixed'} learner</p>
+            </div>
+            <button onClick={handleLogout} className="text-fg-subtle transition-colors hover:text-fg" title="Log out" aria-label="Log out">
+              <LogOut className="h-4 w-4" strokeWidth={1.75} />
+            </button>
           </div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+        </div>
+      </aside>
+    </>
   )
 }
 

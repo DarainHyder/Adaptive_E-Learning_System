@@ -1,0 +1,51 @@
+{
+  "topics": [
+    "python-basics",
+    "control-flow",
+    "functions",
+    "data-structures",
+    "oop",
+    "error-handling-testing",
+    "algorithms",
+    "web-fundamentals",
+    "javascript-dom",
+    "rest-apis",
+    "database-design",
+    "sql-querying",
+    "statistics",
+    "numpy-pandas",
+    "ml-basics",
+    "model-evaluation",
+    "neural-networks",
+    "deep-learning-pytorch",
+    "nlp-transformers",
+    "llm-agents"
+  ],
+  "difficulties": [
+    "beginner",
+    "intermediate",
+    "advanced"
+  ],
+  "max_len": 200,
+  "gap_edges_hours": [
+    1,
+    24,
+    72,
+    168,
+    720
+  ],
+  "architecture": "KTTransformer",
+  "d_model": 128,
+  "layers": 3,
+  "heads": 4,
+  "trained_at": "2026-10-05T13:26:25",
+  "metrics": {
+    "val_auc": 0.6918472296794957,
+    "test_auc": 0.6925657955356248,
+    "bkt_test_auc": 0.6542,
+    "dkt_test_auc": 0.6891,
+    "oracle_auc": 0.7193106599607085,
+    "legacy_v1_test_auc": 0.6067,
+    "baseline_note": "baselines from training/results/curriculum.json (same seed/split)"
+  }
+}

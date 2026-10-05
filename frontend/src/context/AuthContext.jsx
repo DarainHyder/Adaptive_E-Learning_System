@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react'
-import { authAPI } from '../services/api'
+import { authAPI, tokenStore } from '../services/api'
 import toast from 'react-hot-toast'
 
 export const AuthContext = createContext(null)
@@ -23,40 +23,38 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const acceptSession = (data) => {
+    tokenStore.set(data.token)
+    const { token, ...profile } = data
+    setUser(profile)
+    return profile
+  }
+
   const login = async (credentials) => {
-    try {
-      const response = await authAPI.login(credentials)
-      setUser(response.data)
-      toast.success('Welcome back!')
-      return response.data
-    } catch (error) {
-      throw error
-    }
+    const response = await authAPI.login(credentials)
+    toast.success('Welcome back!')
+    return acceptSession(response.data)
   }
 
   const register = async (userData) => {
-    try {
-      const response = await authAPI.register(userData)
-      setUser(response.data)
-      toast.success('Account created successfully!')
-      return response.data
-    } catch (error) {
-      throw error
-    }
+    const response = await authAPI.register(userData)
+    toast.success('Account created successfully!')
+    return acceptSession(response.data)
   }
 
   const logout = async () => {
     try {
       await authAPI.logout()
-      setUser(null)
-      toast.success('Logged out successfully')
     } catch (error) {
       console.error('Logout error:', error)
     }
+    tokenStore.set(null)
+    setUser(null)
+    toast.success('Logged out successfully')
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,250 +1,116 @@
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import { topicAPI, progressAPI, agentAPI } from '../../services/api'
-import { useAuth } from '../../hooks/useAuth'
-import { 
-  BookOpen, 
-  Brain, 
-  TrendingUp, 
-  Zap, 
-  ArrowRight,
-  Sparkles,
-  Target,
-  Award
-} from 'lucide-react'
-import ProgressCard from './ProgressCard'
-import TopicCard from './TopicCard'
-import AgentStatus from './AgentStatus'
+import React, { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { progressAPI, agentAPI } from '../../services/api'
+import { useAuth } from '../../hooks/useAuth'
+import Markdown from '../Common/Markdown'
+import AgentStatus from './AgentStatus'
+import { EmptyState, PageHeader, PageLoader, ProgressBar, SectionTitle, Stat, StatStrip, pct } from '../Common/ui'
+
+const greeting = () => {
+  const h = new Date().getHours()
+  return h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+}
 
 const Dashboard = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [topics, setTopics] = useState([])
-  const [progressSummary, setProgressSummary] = useState(null)
-  const [studyTips, setStudyTips] = useState('')
-  const [agentStatus, setAgentStatus] = useState(null)
-  const [recommendedTopic, setRecommendedTopic] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const [recs, setRecs] = useState(null)
+  const [review, setReview] = useState([])
+  const [tips, setTips] = useState('')
+  const [agents, setAgents] = useState(null)
 
   useEffect(() => {
-    loadDashboardData()
+    progressAPI.getProgressSummary().then((r) => setSummary(r.data)).catch(() => toast.error('Failed to load overview'))
+    // Secondary panels load independently and never block the page
+    progressAPI.getRecommendations().then((r) => setRecs(r.data)).catch(() => setRecs({ recommendations: [] }))
+    progressAPI.getReviewQueue().then((r) => setReview(r.data.due || [])).catch(() => {})
+    progressAPI.getStudyTips().then((r) => setTips(r.data.tips)).catch(() => {})
+    agentAPI.getStatus().then((r) => setAgents(r.data)).catch(() => {})
   }, [])
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
-      
-      // Parallel API calls
-      const [topicsRes, progressRes, tipsRes] = await Promise.all([
-        topicAPI.getAll(),
-        progressAPI.getProgressSummary(),
-        progressAPI.getStudyTips()
-      ])
-
-      setTopics(topicsRes.data)
-      setProgressSummary(progressRes.data)
-      setStudyTips(tipsRes.data.tips)
-
-      // Get next recommended topic
-      try {
-        const nextTopicRes = await progressAPI.getNextTopic()
-        setRecommendedTopic(nextTopicRes.data)
-      } catch (err) {
-        // No recommendation available
-      }
-
-      // Get agent status
-      try {
-        const agentRes = await agentAPI.getStatus()
-        setAgentStatus(agentRes.data)
-      } catch (err) {
-        console.log('Agent status not available')
-      }
-
-    } catch (error) {
-      toast.error('Failed to load dashboard')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  }
-
-  const item = {
-    hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  if (!summary) return <PageLoader />
+  const next = recs?.next_best
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-8"
-    >
-      {/* Welcome Header */}
-      <motion.div variants={item} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 p-8 text-white">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24"></div>
-        
-        <div className="relative z-10">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring' }}
-          >
-            <Sparkles className="w-12 h-12 mb-4" />
-          </motion.div>
-          
-          <h1 className="text-4xl font-bold mb-2">
-            Welcome back, {user?.username}!
-          </h1>
-          <p className="text-primary-100 text-lg mb-6">
-            Your AI-powered learning journey continues
-          </p>
+    <div className="space-y-12">
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        title={<>{greeting()}, <em className="text-gold-300">{user?.username}</em>.</>}
+        subtitle={next ? `Your next best step is ${next.name}. ${next.reason}.` : 'Pick a topic to begin. The system calibrates to you as you go.'}
+        actions={next && (
+          <button onClick={() => navigate(`/learn/${next.topic_id}`)} className="btn-primary">
+            Continue with {next.name} <ArrowRight className="h-4 w-4" />
+          </button>
+        )}
+      />
 
-          {recommendedTopic && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate(`/learn/${recommendedTopic.id}`)}
-              className="bg-white text-primary-600 px-6 py-3 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
-            >
-              <Zap className="w-5 h-5" />
-              Start Learning: {recommendedTopic.name}
-              <ArrowRight className="w-5 h-5" />
-            </motion.button>
-          )}
-        </div>
-      </motion.div>
+      <StatStrip>
+        <Stat label="Mastered" value={`${summary.topics_mastered}`} hint={`of ${summary.topics_total} topics`} />
+        <Stat label="In progress" value={summary.topics_in_progress} hint="topics started" />
+        <Stat label="Avg. mastery" value={pct(summary.average_knowledge)} hint="across started topics" />
+        <Stat label="Answered" value={summary.total_practice_count} hint="questions so far" />
+      </StatStrip>
 
-      {/* Progress Overview */}
-      <motion.div variants={item}>
-        <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-7 h-7 text-primary-600" />
-          Your Progress
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <ProgressCard
-            icon={BookOpen}
-            label="Topics Mastered"
-            value={progressSummary?.topics_mastered || 0}
-            total={topics.length}
-            color="blue"
-            delay={0}
-          />
-          
-          <ProgressCard
-            icon={Brain}
-            label="In Progress"
-            value={progressSummary?.topics_in_progress || 0}
-            total={topics.length}
-            color="purple"
-            delay={0.1}
-          />
-          
-          <ProgressCard
-            icon={Target}
-            label="Avg Knowledge"
-            value={Math.round((progressSummary?.average_knowledge || 0) * 100)}
-            suffix="%"
-            color="green"
-            delay={0.2}
-          />
-          
-          <ProgressCard
-            icon={Award}
-            label="Practice Sessions"
-            value={progressSummary?.total_practice_count || 0}
-            color="orange"
-            delay={0.3}
-          />
-        </div>
-      </motion.div>
-
-      {/* Study Tips */}
-      {studyTips && (
-        <motion.div variants={item} className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800">
-                Personalized Study Tips
-              </h3>
-              <p className="text-sm text-slate-500">
-                AI-generated recommendations for you
-              </p>
-            </div>
+      <div className="grid gap-10 lg:grid-cols-[1.6fr_1fr]">
+        <section>
+          <SectionTitle action={<Link to="/learn" className="btn-ghost">All topics <ArrowRight className="h-3.5 w-3.5" /></Link>}>
+            Recommended for you
+          </SectionTitle>
+          <div className="overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-900">
+            {!recs && <div className="p-6"><PageLoader /></div>}
+            {recs?.recommendations?.map((r, i) => (
+              <button key={r.topic_id} onClick={() => navigate(`/learn/${r.topic_id}`)}
+                className="group flex w-full items-center gap-5 border-b border-ink-700/70 px-5 py-4 text-left transition-colors last:border-0 hover:bg-ink-850">
+                <span className="w-6 font-serif text-xl text-fg-subtle group-hover:text-gold-400">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-fg">{r.name}</p>
+                  <p className="truncate text-xs text-fg-subtle">{r.reason}</p>
+                </div>
+                <div className="hidden w-28 sm:block">
+                  <ProgressBar value={r.current_knowledge} tone={r.current_knowledge > 0 ? 'gold' : 'muted'} />
+                  <p className="mt-1.5 text-right text-[11px] text-fg-subtle">{pct(r.current_knowledge)}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-fg-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-gold-300" />
+              </button>
+            ))}
           </div>
-          
-          <div 
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: studyTips }}
-          />
-        </motion.div>
-      )}
+        </section>
 
-      {/* Topics Grid */}
-      <motion.div variants={item}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <BookOpen className="w-7 h-7 text-primary-600" />
-            Available Topics
-          </h2>
-          
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/learn')}
-            className="text-primary-600 font-semibold flex items-center gap-2 hover:gap-3 transition-all"
-          >
-            View All
-            <ArrowRight className="w-5 h-5" />
-          </motion.button>
-        </div>
+        <section className="space-y-10">
+          <div>
+            <SectionTitle>Due for review</SectionTitle>
+            {review.length ? (
+              <div className="space-y-2">
+                {review.slice(0, 4).map((r) => (
+                  <button key={r.topic_id} onClick={() => navigate(`/quiz/${r.topic_id}`)}
+                    className="card card-hover flex w-full items-center justify-between p-4 text-left">
+                    <div>
+                      <p className="text-sm text-fg">{r.name}</p>
+                      <p className="text-xs text-fg-subtle">Estimated recall {pct(r.recall)}</p>
+                    </div>
+                    <RotateCcw className="h-4 w-4 text-gold-400" />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nothing due">Your forgetting curve looks healthy.</EmptyState>
+            )}
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {topics.slice(0, 6).map((topic, index) => (
-            <TopicCard 
-              key={topic.id} 
-              topic={topic} 
-              delay={index * 0.1}
-            />
-          ))}
-        </div>
-      </motion.div>
+          {tips && (
+            <div>
+              <SectionTitle>Study notes</SectionTitle>
+              <div className="card text-sm"><Markdown>{tips}</Markdown></div>
+            </div>
+          )}
+        </section>
+      </div>
 
-      {/* Agent Status */}
-      {agentStatus && (
-        <motion.div variants={item}>
-          <AgentStatus status={agentStatus} />
-        </motion.div>
-      )}
-    </motion.div>
+      {agents && <AgentStatus status={agents} />}
+    </div>
   )
 }
 

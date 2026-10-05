@@ -1,0 +1,124 @@
+{
+  "topics": {
+    "python-basics": {
+      "p_init": 0.1,
+      "p_learn": 0.02,
+      "p_guess": 0.35,
+      "p_slip": 0.24
+    },
+    "control-flow": {
+      "p_init": 0.1,
+      "p_learn": 0.02,
+      "p_guess": 0.35,
+      "p_slip": 0.24
+    },
+    "functions": {
+      "p_init": 0.05,
+      "p_learn": 0.05,
+      "p_guess": 0.3,
+      "p_slip": 0.24
+    },
+    "data-structures": {
+      "p_init": 0.05,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "oop": {
+      "p_init": 0.05,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "error-handling-testing": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "algorithms": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "web-fundamentals": {
+      "p_init": 0.1,
+      "p_learn": 0.05,
+      "p_guess": 0.35,
+      "p_slip": 0.24
+    },
+    "javascript-dom": {
+      "p_init": 0.05,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "rest-apis": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "database-design": {
+      "p_init": 0.05,
+      "p_learn": 0.02,
+      "p_guess": 0.3,
+      "p_slip": 0.24
+    },
+    "sql-querying": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "statistics": {
+      "p_init": 0.05,
+      "p_learn": 0.02,
+      "p_guess": 0.3,
+      "p_slip": 0.24
+    },
+    "numpy-pandas": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "ml-basics": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "model-evaluation": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "neural-networks": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "deep-learning-pytorch": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "nlp-transformers": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    },
+    "llm-agents": {
+      "p_init": 0.02,
+      "p_learn": 0.02,
+      "p_guess": 0.25,
+      "p_slip": 0.3
+    }
+  }
+}

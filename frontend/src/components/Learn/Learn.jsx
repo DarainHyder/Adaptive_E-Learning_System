@@ -1,259 +1,126 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useParams, useNavigate } from 'react-router-dom'
-import { topicAPI, learningAPI, progressAPI } from '../../services/api'
-import { 
-  BookOpen, 
-  ArrowLeft, 
-  Sparkles, 
-  Play,
-  ChevronRight,
-  Lightbulb
-} from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { learningAPI, progressAPI, topicAPI } from '../../services/api'
+import TopicPicker from '../Common/TopicPicker'
+import { DifficultyTag, PageHeader, PageLoader, Spinner } from '../Common/ui'
 import LessonViewer from './LessonViewer'
 import CodePlayground from './CodePlayground'
-import toast from 'react-hot-toast'
+import TutorChat from './TutorChat'
 
 const Learn = () => {
   const { topicId } = useParams()
   const navigate = useNavigate()
-  
-  const [topics, setTopics] = useState([])
-  const [selectedTopic, setSelectedTopic] = useState(null)
+  const [topic, setTopic] = useState(null)
+  const [path, setPath] = useState(null)
   const [lesson, setLesson] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [generatingLesson, setGeneratingLesson] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [seed, setSeed] = useState(null)
+  const playgroundRef = useRef(null)
 
   useEffect(() => {
-    loadTopics()
-  }, [])
-
-  useEffect(() => {
-    if (topicId) {
-      loadTopicAndLesson(parseInt(topicId))
-    }
+    setTopic(null); setLesson(null); setPath(null); setSeed(null)
+    if (!topicId) return
+    topicAPI.getById(topicId).then((r) => setTopic(r.data)).catch(() => navigate('/learn'))
+    progressAPI.getLearningPath(topicId).then((r) => setPath(r.data)).catch(() => {})
   }, [topicId])
 
-  const loadTopics = async () => {
+  const generate = async (fresh = false) => {
+    setGenerating(true)
     try {
-      const response = await topicAPI.getAll()
-      setTopics(response.data)
-    } catch (error) {
-      toast.error('Failed to load topics')
-    }
-  }
-
-  const loadTopicAndLesson = async (id) => {
-    try {
-      setLoading(true)
-      const topicResponse = await topicAPI.getById(id)
-      setSelectedTopic(topicResponse.data)
-    } catch (error) {
-      toast.error('Failed to load topic')
+      const r = await learningAPI.generateLesson(topic.id, fresh)
+      setLesson(r.data)
+      const practice = r.data.lesson?.practice
+      setSeed(practice ? { code: practice.starter_code, practice } : null)
+    } catch {
+      toast.error('Could not prepare the lesson')
     } finally {
-      setLoading(false)
+      setGenerating(false)
     }
   }
 
-  const handleGenerateLesson = async () => {
-    if (!selectedTopic) return
+  const tryCode = (code, practice = null) => {
+    setSeed({ code, practice })
+    setTimeout(() => playgroundRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
 
-    setGeneratingLesson(true)
-    const loadingToast = toast.loading('AI is generating your personalized lesson...')
-
+  const nextTopic = async () => {
     try {
-      const response = await learningAPI.generateLesson(selectedTopic.id)
-      setLesson(response.data)
-      toast.success('Lesson generated successfully!', { id: loadingToast })
-    } catch (error) {
-      toast.error('Failed to generate lesson', { id: loadingToast })
-    } finally {
-      setGeneratingLesson(false)
+      const r = await progressAPI.getNextTopic(topic.id)
+      navigate(`/learn/${r.data.id}`)
+    } catch {
+      toast('No further recommendation right now')
     }
   }
 
-  const handleSelectTopic = (topic) => {
-    setSelectedTopic(topic)
-    setLesson(null)
-    navigate(`/learn/${topic.id}`)
-  }
-
-  const handleNextTopic = async () => {
-    try {
-      const response = await progressAPI.getNextTopic(selectedTopic?.id)
-      if (response.data) {
-        handleSelectTopic(response.data)
-      }
-    } catch (error) {
-      toast.error('No more recommendations')
-    }
-  }
-
-  if (!selectedTopic && !topicId) {
+  if (!topicId) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-8"
-      >
-        {/* Header */}
-        <div className="card bg-gradient-to-br from-primary-500 to-accent-600 text-white">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <BookOpen className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Choose a Topic to Learn
-              </h1>
-              <p className="text-primary-100">
-                AI-powered personalized lessons await you
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Topics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {topics.map((topic, index) => (
-            <motion.div
-              key={topic.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
-              onClick={() => handleSelectTopic(topic)}
-              className="card cursor-pointer group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  topic.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
-                  topic.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {topic.difficulty}
-                </span>
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-primary-600 transition-colors">
-                {topic.name}
-              </h3>
-
-              <p className="text-sm text-slate-600 mb-4">
-                {topic.description}
-              </p>
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase">
-                  {topic.category}
-                </span>
-                <ChevronRight className="w-5 h-5 text-primary-600 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+      <>
+        <PageHeader eyebrow="Learn" title="What would you like to learn?"
+          subtitle="Lessons are written for your current level by the teaching agent. Topics with unmet prerequisites are marked." />
+        <TopicPicker onSelect={(t) => navigate(`/learn/${t.id}`)} actionLabel="Not started" />
+      </>
     )
   }
+  if (!topic) return <PageLoader />
+
+  const before = path?.path?.filter((p) => p.topic_id !== topic.id) || []
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => {
-            setSelectedTopic(null)
-            setLesson(null)
-            navigate('/learn')
-          }}
-          className="flex items-center gap-2 text-slate-600 hover:text-primary-600 transition-colors font-medium"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Topics
-        </button>
+    <div>
+      <Link to="/learn" className="btn-ghost mb-8"><ArrowLeft className="h-4 w-4" /> All topics</Link>
 
-        {lesson && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleNextTopic}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Lightbulb className="w-5 h-5" />
-            Next Recommended Topic
-          </motion.button>
+      <PageHeader
+        eyebrow={topic.category}
+        title={topic.name}
+        subtitle={topic.description}
+        actions={lesson && <button onClick={nextTopic} className="btn-secondary">Next topic <ArrowRight className="h-4 w-4" /></button>}
+      >
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <DifficultyTag level={topic.difficulty} />
+          {topic.key_concepts?.map((c) => <span key={c} className="chip">{c}</span>)}
+        </div>
+        {before.length > 0 && (
+          <p className="mt-5 text-sm text-fg-subtle">
+            Suggested first:{' '}
+            {before.map((p, i) => (
+              <React.Fragment key={p.topic_id}>
+                {i > 0 && ' → '}
+                <Link to={`/learn/${p.topic_id}`} className="link-gold">{p.name}</Link>
+              </React.Fragment>
+            ))}
+          </p>
         )}
-      </div>
+      </PageHeader>
 
-      {/* Topic Header */}
-      {selectedTopic && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card bg-gradient-to-br from-primary-500 to-accent-600 text-white"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-7 h-7" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">{selectedTopic.name}</h1>
-                  <p className="text-primary-100">{selectedTopic.category}</p>
-                </div>
-              </div>
-              <p className="text-white/90 mb-4">
-                {selectedTopic.description}
-              </p>
-            </div>
-
-            <span className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-              selectedTopic.difficulty === 'beginner' ? 'bg-green-500' :
-              selectedTopic.difficulty === 'intermediate' ? 'bg-yellow-500' :
-              'bg-red-500'
-            }`}>
-              {selectedTopic.difficulty}
-            </span>
+      {!lesson ? (
+        <div className="card flex flex-col items-start gap-5 p-8 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-serif text-2xl text-fg">Your personalised lesson</p>
+            <p className="mt-1 max-w-lg text-sm text-fg-subtle">
+              The knowledge agent reads your learner model, the teaching agent picks a strategy that has worked
+              for learners like you, then writes the lesson at your level.
+            </p>
           </div>
-
-          {!lesson && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleGenerateLesson}
-              disabled={generatingLesson}
-              className="mt-6 bg-white text-primary-600 px-6 py-3 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              {generatingLesson ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                  Generating Personalized Lesson...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate AI Lesson
-                  <Play className="w-5 h-5" />
-                </>
-              )}
-            </motion.button>
-          )}
-        </motion.div>
+          <button onClick={() => generate(false)} disabled={generating} className="btn-primary px-6 py-3">
+            {generating ? <><Spinner /> Preparing lesson…</> : <><Sparkles className="h-4 w-4" /> Generate lesson</>}
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 space-y-8">
+            <LessonViewer lesson={lesson} topic={topic} onTryCode={tryCode}
+              onRegenerate={() => generate(true)} regenerating={generating} />
+            <div ref={playgroundRef} className="scroll-mt-8">
+              <CodePlayground topicName={topic.name} topicId={topic.id} seed={seed} />
+            </div>
+          </div>
+          <aside className="xl:sticky xl:top-8 xl:h-[calc(100vh-4rem)]">
+            <TutorChat topic={topic} />
+          </aside>
+        </div>
       )}
-
-      {/* Lesson Content */}
-      <AnimatePresence>
-        {lesson && (
-          <>
-            <LessonViewer lesson={lesson} topic={selectedTopic} />
-            <CodePlayground topicName={selectedTopic.name} />
-          </>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

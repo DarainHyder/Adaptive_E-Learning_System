@@ -1,0 +1,14 @@
+# Isolated environment for this project (backend + training).
+# PyTorch comes from the cu128 pip wheel, which bundles its own CUDA runtime;
+# it does not modify the system NVIDIA driver or CUDA toolkit.
+name: elearn
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch==2.11.0
+      - -r backend/requirements.txt
+      - -r training/requirements-train.txt

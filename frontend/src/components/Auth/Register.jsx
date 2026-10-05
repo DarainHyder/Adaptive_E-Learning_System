@@ -1,175 +1,62 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
-import { UserPlus, Mail, Lock, User, BookOpen } from 'lucide-react'
+import AuthLayout, { Field } from './AuthLayout'
+import { Spinner } from '../Common/ui'
+
+const STYLES = [
+  ['mixed', 'A bit of everything'],
+  ['visual', 'Visual — diagrams & examples'],
+  ['reading', 'Reading — detailed explanations'],
+  ['kinesthetic', 'Hands-on — coding exercises'],
+]
 
 const Register = () => {
   const navigate = useNavigate()
   const { register } = useAuth()
-  const [formData, setFormData] = useState({
-    username: '',
-    email: ''
-  })
+  const [form, setForm] = useState({ username: '', email: '', password: '', learning_style: 'mixed' })
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const handleSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    
     try {
-      await register(formData)
+      await register(form)
       navigate('/')
-    } catch (error) {
-      // Error handled by toast
+    } catch {
+      // toast shown by the API client
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-accent-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-accent-500 to-primary-500 rounded-2xl mb-4 shadow-xl"
-          >
-            <BookOpen className="w-10 h-10 text-white" />
-          </motion.div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">
-            Join Us Today
-          </h1>
-          <p className="text-slate-600">
-            Start your personalized learning journey
-          </p>
-        </div>
-
-        {/* Register Form */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="card"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="input-field pl-11"
-                  placeholder="Choose a username"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="input-field pl-11"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-5 h-5" />
-                  Create Account
-                </>
-              )}
-            </motion.button>
-          </form>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-slate-500">
-                Already have an account?
-              </span>
-            </div>
-          </div>
-
-          {/* Login Link */}
-          <Link to="/login">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="button"
-              className="w-full btn-secondary"
-            >
-              Login
-            </motion.button>
-          </Link>
-        </motion.div>
-
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-center text-sm text-slate-500 mt-6"
-        >
-          By registering, you agree to our AI-powered adaptive learning
-        </motion.p>
-      </motion.div>
-    </div>
+    <AuthLayout
+      title="Create your account"
+      subtitle="Two minutes to set up. The system calibrates to you as you go."
+      footer={<>Already have an account? <Link to="/login" className="link-gold">Sign in</Link></>}
+    >
+      <form onSubmit={onSubmit} className="space-y-5">
+        <Field label="Username" name="username" value={form.username} onChange={onChange}
+          autoComplete="username" placeholder="ada" pattern="[A-Za-z0-9_.\-]{3,40}"
+          title="3-40 letters, numbers, _ . -" required />
+        <Field label="Email" name="email" type="email" value={form.email} onChange={onChange}
+          autoComplete="email" placeholder="ada@example.com" required />
+        <Field label="Password" name="password" type="password" value={form.password} onChange={onChange}
+          autoComplete="new-password" placeholder="At least 8 characters" minLength={8} required />
+        <Field label="How do you learn best?">
+          <select name="learning_style" value={form.learning_style} onChange={onChange} className="input-field">
+            {STYLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </Field>
+        <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+          {loading ? <Spinner /> : <>Create account <ArrowRight className="h-4 w-4" /></>}
+        </button>
+      </form>
+    </AuthLayout>
   )
 }
 

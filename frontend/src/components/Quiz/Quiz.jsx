@@ -1,365 +1,144 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useParams, useNavigate } from 'react-router-dom'
-import { topicAPI, quizAPI } from '../../services/api'
-import { Brain, ArrowLeft, Sparkles, TrendingUp, Award } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { quizAPI, topicAPI } from '../../services/api'
+import TopicPicker from '../Common/TopicPicker'
+import { PageHeader, PageLoader, Spinner, pct } from '../Common/ui'
 import Question from './Question'
 import Results from './Results'
-import toast from 'react-hot-toast'
 
 const Quiz = () => {
   const { topicId } = useParams()
   const navigate = useNavigate()
-
-  const [topics, setTopics] = useState([])
-  const [selectedTopic, setSelectedTopic] = useState(null)
+  const [topic, setTopic] = useState(null)
   const [quiz, setQuiz] = useState(null)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [results, setResults] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [generatingQuiz, setGeneratingQuiz] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const questionStart = useRef(Date.now())
 
   useEffect(() => {
-    loadTopics()
-  }, [])
-
-  useEffect(() => {
-    if (topicId) {
-      loadTopicAndQuiz(parseInt(topicId))
-    }
+    setTopic(null); setQuiz(null); setAnswers({}); setResults(null); setIndex(0)
+    if (topicId) topicAPI.getById(topicId).then((r) => setTopic(r.data)).catch(() => navigate('/quiz'))
   }, [topicId])
 
-  const loadTopics = async () => {
-    try {
-      const response = await topicAPI.getAll()
-      setTopics(response.data)
-    } catch (error) {
-      toast.error('Failed to load topics')
-    }
-  }
+  useEffect(() => { questionStart.current = Date.now() }, [index, quiz])
 
-  const loadTopicAndQuiz = async (id) => {
+  const start = async () => {
+    setGenerating(true)
     try {
-      setLoading(true)
-      const topicResponse = await topicAPI.getById(id)
-      setSelectedTopic(topicResponse.data)
-    } catch (error) {
-      toast.error('Failed to load topic')
+      const r = await quizAPI.generateQuiz(topic.id)
+      setQuiz(r.data); setIndex(0); setAnswers({}); setResults(null)
+    } catch {
+      toast.error('Could not assemble a quiz')
     } finally {
-      setLoading(false)
+      setGenerating(false)
     }
   }
 
-  const handleGenerateQuiz = async () => {
-    if (!selectedTopic) return
-
-    setGeneratingQuiz(true)
-    const loadingToast = toast.loading('AI is generating your adaptive quiz...')
-
+  const answer = async (i, choice) => {
+    if (answers[i]) return
+    const q = quiz.questions[i]
+    setAnswers((a) => ({ ...a, [i]: { user_answer: choice, question: q.question, pending: true } }))
     try {
-      const response = await quizAPI.generateQuiz(selectedTopic.id)
-      setQuiz(response.data)
-      setCurrentQuestionIndex(0)
-      setAnswers({})
-      setResults(null)
-      toast.success('Quiz generated successfully!', { id: loadingToast })
-    } catch (error) {
-      toast.error('Failed to generate quiz', { id: loadingToast })
-    } finally {
-      setGeneratingQuiz(false)
-    }
-  }
-
-  const handleSelectTopic = (topic) => {
-    setSelectedTopic(topic)
-    setQuiz(null)
-    setAnswers({})
-    setResults(null)
-    navigate(`/quiz/${topic.id}`)
-  }
-
-  const handleAnswer = async (questionIndex, selectedAnswer) => {
-    const question = quiz.questions[questionIndex]
-    
-    // Save answer
-    setAnswers(prev => ({
-      ...prev,
-      [questionIndex]: {
-        user_answer: selectedAnswer,
-        correct_answer: question.correct_answer,
-        question: question.question,
-        explanation: question.explanation
-      }
-    }))
-
-    // Submit to backend
-    try {
-      const response = await quizAPI.submitAnswer({
-        topic_id: selectedTopic.id,
-        question: question.question,
-        user_answer: selectedAnswer,
-        correct_answer: question.correct_answer,
-        difficulty: quiz.difficulty
+      // Graded server-side: the client never sees the answer key before answering
+      const r = await quizAPI.submitAnswer({
+        topic_id: topic.id, question_id: q.id, user_answer: choice,
+        time_taken: Math.round((Date.now() - questionStart.current) / 1000),
       })
-
-      // Update answer with backend response
-      setAnswers(prev => ({
-        ...prev,
-        [questionIndex]: {
-          ...prev[questionIndex],
-          is_correct: response.data.is_correct,
-          explanation: response.data.explanation,
-          new_knowledge_level: response.data.new_knowledge_level
-        }
-      }))
-    } catch (error) {
-      console.error('Failed to submit answer:', error)
+      setAnswers((a) => ({ ...a, [i]: { ...a[i], pending: false, ...r.data } }))
+    } catch {
+      setAnswers((a) => { const n = { ...a }; delete n[i]; return n })
     }
   }
 
-  const handleNext = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1)
-    }
-  }
-
-  const handleSubmitQuiz = () => {
-    const answeredCount = Object.keys(answers).length
-    const totalQuestions = quiz.questions.length
-
-    if (answeredCount < totalQuestions) {
-      toast.error(`Please answer all questions (${answeredCount}/${totalQuestions})`)
+  const finish = () => {
+    const done = Object.values(answers).filter((a) => !a.pending)
+    if (done.length < quiz.questions.length) {
+      toast(`Answer all questions first (${done.length}/${quiz.questions.length})`)
       return
     }
-
-    // Calculate results
-    const correct = Object.values(answers).filter(a => a.is_correct).length
-    const score = (correct / totalQuestions) * 100
-
-    setResults({
-      score,
-      correct,
-      total: totalQuestions,
-      answers,
-      topicName: selectedTopic.name
-    })
+    const correct = done.filter((a) => a.is_correct).length
+    const last = answers[quiz.questions.length - 1]
+    setResults({ score: (correct / done.length) * 100, correct, total: done.length, answers,
+      topicName: topic.name, topicId: topic.id, mastery: last?.new_knowledge_level })
   }
 
-  // Topic selection screen
-  if (!selectedTopic && !topicId) {
+  if (!topicId) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="space-y-8"
-      >
-        <div className="card bg-gradient-to-br from-green-500 to-emerald-600 text-white">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Brain className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Test Your Knowledge
-              </h1>
-              <p className="text-green-100">
-                AI-adaptive quizzes that adjust to your level
-              </p>
-            </div>
+      <>
+        <PageHeader eyebrow="Practice" title="Test what you know"
+          subtitle="Each quiz is pitched so you succeed about 70% of the time, the sweet spot for learning." />
+        <TopicPicker onSelect={(t) => navigate(`/quiz/${t.id}`)} actionLabel="No attempts yet" />
+      </>
+    )
+  }
+  if (!topic) return <PageLoader />
+  if (results) return <Results results={results} onRetake={start} />
+
+  if (!quiz) {
+    return (
+      <div>
+        <Link to="/quiz" className="btn-ghost mb-8"><ArrowLeft className="h-4 w-4" /> All topics</Link>
+        <PageHeader eyebrow={`Practice · ${topic.category}`} title={topic.name} subtitle={topic.description} />
+        <div className="card flex flex-col items-start gap-5 p-8 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-serif text-2xl text-fg">An adaptive quiz</p>
+            <p className="mt-1 max-w-lg text-sm text-fg-subtle">
+              The assessment agent predicts how you will do at each difficulty and mixes questions you have not seen yet.
+            </p>
           </div>
+          <button onClick={start} disabled={generating} className="btn-primary px-6 py-3">
+            {generating ? <><Spinner /> Assembling…</> : <>Start quiz <ArrowRight className="h-4 w-4" /></>}
+          </button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {topics.map((topic, index) => (
-            <motion.div
-              key={topic.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
-              onClick={() => handleSelectTopic(topic)}
-              className="card cursor-pointer group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Brain className="w-6 h-6 text-white" />
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  topic.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
-                  topic.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {topic.difficulty}
-                </span>
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-green-600 transition-colors">
-                {topic.name}
-              </h3>
-              <p className="text-sm text-slate-600">
-                Test your understanding of {topic.name}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
+      </div>
     )
   }
 
-  // Show results
-  if (results) {
-    return <Results results={results} onRetake={() => {
-      setResults(null)
-      setQuiz(null)
-      setAnswers({})
-    }} />
-  }
+  const total = quiz.questions.length
+  const current = answers[index]
+  const answeredCount = Object.values(answers).filter((a) => !a.pending).length
+  const meta = quiz.agent_metadata || {}
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => {
-            setSelectedTopic(null)
-            setQuiz(null)
-            setAnswers({})
-            navigate('/quiz')
-          }}
-          className="flex items-center gap-2 text-slate-600 hover:text-green-600 transition-colors font-medium"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Topics
-        </button>
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-10 flex items-center justify-between gap-4">
+        <button onClick={() => setQuiz(null)} className="btn-ghost"><ArrowLeft className="h-4 w-4" /> {topic.name}</button>
+        {meta.expected_success !== undefined && (
+          <span className="text-xs text-fg-subtle">Predicted success {pct(meta.expected_success)}</span>
+        )}
       </div>
 
-      {/* Topic Header */}
-      {selectedTopic && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card bg-gradient-to-br from-green-500 to-emerald-600 text-white"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Brain className="w-7 h-7" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">{selectedTopic.name} Quiz</h1>
-                  <p className="text-green-100">Category: {selectedTopic.category}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="mb-8 flex items-center gap-4">
+        <span className="font-mono text-xs text-fg-subtle">{String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+        <div className="flex flex-1 gap-1.5">
+          {quiz.questions.map((_, i) => {
+            const a = answers[i]
+            const color = a?.is_correct === true ? 'bg-ok' : a?.is_correct === false ? 'bg-bad' : i === index ? 'bg-gold-400' : 'bg-ink-700'
+            return <button key={i} onClick={() => setIndex(i)} className={`h-1 flex-1 rounded-full transition-colors ${color}`} aria-label={`Question ${i + 1}`} />
+          })}
+        </div>
+      </div>
 
-          {!quiz && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleGenerateQuiz}
-              disabled={generatingQuiz}
-              className="mt-6 bg-white text-green-600 px-6 py-3 rounded-xl font-semibold shadow-xl hover:shadow-2xl transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              {generatingQuiz ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                  Generating Adaptive Quiz...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate AI Quiz
-                </>
-              )}
-            </motion.button>
-          )}
-        </motion.div>
-      )}
+      <Question key={quiz.questions[index].id ?? index} question={quiz.questions[index]}
+        selectedAnswer={current?.user_answer} onAnswer={(c) => answer(index, c)}
+        showResult={current?.is_correct !== undefined} pending={!!current?.pending} result={current} />
 
-      {/* Quiz Content */}
-      <AnimatePresence mode="wait">
-        {quiz && (
-          <motion.div
-            key="quiz-content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-6"
-          >
-            {/* Progress Bar */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-slate-700">
-                  Question {currentQuestionIndex + 1} of {quiz.questions.length}
-                </span>
-                <span className="text-sm font-semibold text-slate-700">
-                  Answered: {Object.keys(answers).length}/{quiz.questions.length}
-                </span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((currentQuestionIndex + 1) / quiz.questions.length) * 100}%` }}
-                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"
-                />
-              </div>
-            </div>
-
-            {/* Question */}
-            <Question
-              question={quiz.questions[currentQuestionIndex]}
-              questionNumber={currentQuestionIndex + 1}
-              selectedAnswer={answers[currentQuestionIndex]?.user_answer}
-              onAnswer={(answer) => handleAnswer(currentQuestionIndex, answer)}
-              showResult={!!answers[currentQuestionIndex]}
-              result={answers[currentQuestionIndex]}
-            />
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0}
-                className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </motion.button>
-
-              {currentQuestionIndex === quiz.questions.length - 1 ? (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSubmitQuiz}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  <Award className="w-5 h-5" />
-                  Submit Quiz
-                </motion.button>
-              ) : (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleNext}
-                  className="btn-primary"
-                >
-                  Next Question
-                </motion.button>
-              )}
-            </div>
-          </motion.div>
+      <div className="mt-8 flex items-center justify-between">
+        <button onClick={() => setIndex((i) => i - 1)} disabled={index === 0} className="btn-ghost disabled:invisible">
+          <ArrowLeft className="h-4 w-4" /> Previous
+        </button>
+        {index === total - 1 ? (
+          <button onClick={finish} disabled={answeredCount < total} className="btn-primary">See results</button>
+        ) : (
+          <button onClick={() => setIndex((i) => i + 1)} className={current?.is_correct !== undefined ? 'btn-primary' : 'btn-secondary'}>
+            Next <ArrowRight className="h-4 w-4" />
+          </button>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }

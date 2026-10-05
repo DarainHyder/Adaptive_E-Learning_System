@@ -1,0 +1,222 @@
+{
+  "python-basics": [
+    {"difficulty": "beginner", "concept": "type conversion", "question": "What does int(\"7\") + 3 evaluate to?",
+     "options": {"A": "10", "B": "\"73\"", "C": "TypeError", "D": "7.3"}, "correct_answer": "A",
+     "explanation": "int(\"7\") converts the string to the integer 7, so 7 + 3 = 10."},
+    {"difficulty": "intermediate", "concept": "operators", "question": "What is the value of 17 // 5 and 17 % 5 respectively?",
+     "options": {"A": "3.4 and 2", "B": "3 and 2", "C": "3 and 3", "D": "4 and 2"}, "correct_answer": "B",
+     "explanation": "// is floor division (17 // 5 = 3) and % gives the remainder (17 % 5 = 2)."},
+    {"difficulty": "advanced", "concept": "mutability", "question": "Given a = [1, 2]; b = a; b.append(3) — what is a?",
+     "options": {"A": "[1, 2]", "B": "[1, 2, 3]", "C": "[3]", "D": "Error"}, "correct_answer": "B",
+     "explanation": "b = a binds a second name to the same list object, so mutating b also changes a."}
+  ],
+  "control-flow": [
+    {"difficulty": "beginner", "concept": "range()", "question": "How many times does `for i in range(2, 8):` loop?",
+     "options": {"A": "8", "B": "7", "C": "6", "D": "5"}, "correct_answer": "C",
+     "explanation": "range(2, 8) yields 2, 3, 4, 5, 6, 7 — six values; the stop value is excluded."},
+    {"difficulty": "intermediate", "concept": "list comprehensions", "question": "What does [x * x for x in range(5) if x % 2 == 0] produce?",
+     "options": {"A": "[0, 4, 16]", "B": "[1, 9]", "C": "[0, 1, 4, 9, 16]", "D": "[4, 16]"}, "correct_answer": "A",
+     "explanation": "The even values 0, 2, 4 are kept and squared: [0, 4, 16]."},
+    {"difficulty": "advanced", "concept": "loop else", "question": "When does the `else` block of a Python `for` loop run?",
+     "options": {"A": "Only when the loop body raises an exception", "B": "When the loop finishes without hitting `break`", "C": "Every time the condition is false", "D": "Never; it is a syntax error"}, "correct_answer": "B",
+     "explanation": "A loop's else clause runs once after normal completion and is skipped if the loop exits via break."}
+  ],
+  "functions": [
+    {"difficulty": "beginner", "concept": "return", "question": "What does a Python function return if it has no return statement?",
+     "options": {"A": "0", "B": "An empty string", "C": "None", "D": "It raises an error"}, "correct_answer": "C",
+     "explanation": "Functions without an explicit return implicitly return None."},
+    {"difficulty": "intermediate", "concept": "*args/**kwargs", "question": "In def f(*args, **kwargs), calling f(1, 2, x=3) gives args and kwargs equal to:",
+     "options": {"A": "[1, 2] and {'x': 3}", "B": "(1, 2) and {'x': 3}", "C": "(1, 2, 3) and {}", "D": "(1, 2) and ('x', 3)"}, "correct_answer": "B",
+     "explanation": "Positional extras are collected into a tuple and keyword extras into a dict."},
+    {"difficulty": "advanced", "concept": "default and keyword args", "question": "Why is `def add(item, bucket=[])` a common bug?",
+     "options": {"A": "Lists cannot be default values", "B": "The default list is created once and shared across calls", "C": "bucket becomes a tuple", "D": "It makes the function recursive"}, "correct_answer": "B",
+     "explanation": "Default values are evaluated once at definition time, so the same list accumulates items across calls. Use bucket=None instead."}
+  ],
+  "data-structures": [
+    {"difficulty": "beginner", "concept": "lists vs tuples", "question": "Which of these is immutable?",
+     "options": {"A": "list", "B": "dict", "C": "set", "D": "tuple"}, "correct_answer": "D",
+     "explanation": "Tuples cannot be modified after creation; lists, dicts and sets are mutable."},
+    {"difficulty": "intermediate", "concept": "dict lookups", "question": "What is the average time complexity of `key in my_dict`?",
+     "options": {"A": "O(1)", "B": "O(log n)", "C": "O(n)", "D": "O(n log n)"}, "correct_answer": "A",
+     "explanation": "Dictionaries are hash tables, so membership checks are O(1) on average."},
+    {"difficulty": "advanced", "concept": "stack/queue (deque)", "question": "Why prefer collections.deque over list for a FIFO queue?",
+     "options": {"A": "deque supports indexing faster", "B": "list.pop(0) is O(n) while deque.popleft() is O(1)", "C": "deque uses less memory per item", "D": "lists cannot hold mixed types"}, "correct_answer": "B",
+     "explanation": "Removing from the front of a list shifts every element (O(n)); a deque pops from either end in O(1)."}
+  ],
+  "oop": [
+    {"difficulty": "beginner", "concept": "class and __init__", "question": "What is the role of __init__ in a Python class?",
+     "options": {"A": "It deletes the object", "B": "It initializes a newly created instance", "C": "It defines a class constant", "D": "It imports the class"}, "correct_answer": "B",
+     "explanation": "__init__ runs right after an instance is created and sets up its initial attributes."},
+    {"difficulty": "intermediate", "concept": "inheritance and super()", "question": "What does super().__init__(name) do inside a subclass __init__?",
+     "options": {"A": "Creates a new parent object", "B": "Calls the parent class initializer on the current instance", "C": "Copies the parent's methods", "D": "Makes the class abstract"}, "correct_answer": "B",
+     "explanation": "super() delegates to the next class in the MRO so the parent's initialization runs on self."},
+    {"difficulty": "advanced", "concept": "dunder methods", "question": "Which method should you implement so that len(obj) works?",
+     "options": {"A": "__size__", "B": "__count__", "C": "__len__", "D": "__length__"}, "correct_answer": "C",
+     "explanation": "The built-in len() calls the object's __len__ method."}
+  ],
+  "error-handling-testing": [
+    {"difficulty": "beginner", "concept": "try/except/else/finally", "question": "When does a `finally` block run?",
+     "options": {"A": "Only if an exception occurs", "B": "Only if no exception occurs", "C": "Always, whether or not an exception occurs", "D": "Only when re-raising"}, "correct_answer": "C",
+     "explanation": "finally always executes, making it the right place for cleanup code."},
+    {"difficulty": "intermediate", "concept": "raising exceptions", "question": "Which is the best way to signal an invalid argument value?",
+     "options": {"A": "return -1", "B": "print('error')", "C": "raise ValueError('...')", "D": "exit()"}, "correct_answer": "C",
+     "explanation": "Raising ValueError communicates the problem explicitly and lets callers handle it."},
+    {"difficulty": "advanced", "concept": "pytest basics", "question": "How do you assert that a function raises ZeroDivisionError in pytest?",
+     "options": {"A": "assert f() == ZeroDivisionError", "B": "with pytest.raises(ZeroDivisionError): f()", "C": "pytest.expect(f, ZeroDivisionError)", "D": "try: f() except: pass"}, "correct_answer": "B",
+     "explanation": "pytest.raises is a context manager that fails the test unless the expected exception is raised."}
+  ],
+  "algorithms": [
+    {"difficulty": "beginner", "concept": "binary search", "question": "Binary search requires the input to be:",
+     "options": {"A": "Sorted", "B": "Unique", "C": "Numeric", "D": "Of even length"}, "correct_answer": "A",
+     "explanation": "Binary search halves the range by comparing with the middle element, which only works on sorted data."},
+    {"difficulty": "intermediate", "concept": "merge/quick sort", "question": "What is the worst-case time complexity of merge sort?",
+     "options": {"A": "O(n)", "B": "O(n log n)", "C": "O(n^2)", "D": "O(log n)"}, "correct_answer": "B",
+     "explanation": "Merge sort always splits in half (log n levels) and merges in linear time per level."},
+    {"difficulty": "advanced", "concept": "two pointers and sliding window", "question": "Finding the longest substring without repeating characters is best solved in:",
+     "options": {"A": "O(n^3) brute force only", "B": "O(n) with a sliding window and a hash map", "C": "O(n log n) by sorting", "D": "O(1) with recursion"}, "correct_answer": "B",
+     "explanation": "A sliding window that tracks the last index of each character visits each character a constant number of times."}
+  ],
+  "web-fundamentals": [
+    {"difficulty": "beginner", "concept": "HTML elements", "question": "Which HTML element creates a hyperlink?",
+     "options": {"A": "<link>", "B": "<a>", "C": "<href>", "D": "<nav>"}, "correct_answer": "B",
+     "explanation": "The anchor element <a href=\"...\"> creates clickable hyperlinks; <link> is for stylesheets."},
+    {"difficulty": "intermediate", "concept": "box model", "question": "With box-sizing: border-box, the declared width includes:",
+     "options": {"A": "Content only", "B": "Content and padding", "C": "Content, padding and border", "D": "Content, padding, border and margin"}, "correct_answer": "C",
+     "explanation": "border-box includes padding and border in the width; margin is always outside."},
+    {"difficulty": "advanced", "concept": "flexbox", "question": "In a flex row container, which property aligns items vertically?",
+     "options": {"A": "justify-content", "B": "align-items", "C": "flex-direction", "D": "text-align"}, "correct_answer": "B",
+     "explanation": "align-items works on the cross axis, which is vertical for a row; justify-content works on the main axis."}
+  ],
+  "javascript-dom": [
+    {"difficulty": "beginner", "concept": "let/const", "question": "What happens if you reassign a variable declared with const?",
+     "options": {"A": "It silently keeps the old value", "B": "TypeError: Assignment to constant variable", "C": "It becomes undefined", "D": "It works normally"}, "correct_answer": "B",
+     "explanation": "const bindings cannot be reassigned; doing so throws a TypeError."},
+    {"difficulty": "intermediate", "concept": "event listeners", "question": "Which method attaches a click handler to an element?",
+     "options": {"A": "el.on('click', fn)", "B": "el.addEventListener('click', fn)", "C": "el.click = fn()", "D": "el.listen('click', fn)"}, "correct_answer": "B",
+     "explanation": "addEventListener registers a handler without overwriting other listeners."},
+    {"difficulty": "advanced", "concept": "promises and async/await", "question": "What does an async function always return?",
+     "options": {"A": "undefined", "B": "A Promise", "C": "The awaited value directly", "D": "A callback"}, "correct_answer": "B",
+     "explanation": "async functions wrap their return value in a Promise, even if you return a plain value."}
+  ],
+  "rest-apis": [
+    {"difficulty": "beginner", "concept": "HTTP methods", "question": "Which HTTP method is conventionally used to create a new resource?",
+     "options": {"A": "GET", "B": "POST", "C": "DELETE", "D": "HEAD"}, "correct_answer": "B",
+     "explanation": "POST submits data to create a resource; GET only retrieves."},
+    {"difficulty": "intermediate", "concept": "status codes", "question": "What status code means the client is not authenticated?",
+     "options": {"A": "200", "B": "301", "C": "401", "D": "500"}, "correct_answer": "C",
+     "explanation": "401 Unauthorized indicates missing or invalid authentication; 403 means authenticated but not allowed."},
+    {"difficulty": "advanced", "concept": "statelessness", "question": "Which HTTP methods are defined as idempotent?",
+     "options": {"A": "POST and PATCH", "B": "GET, PUT and DELETE", "C": "Only GET", "D": "All of them"}, "correct_answer": "B",
+     "explanation": "Repeating GET, PUT or DELETE leaves the server in the same state; POST is not idempotent."}
+  ],
+  "database-design": [
+    {"difficulty": "beginner", "concept": "tables and keys", "question": "What uniquely identifies each row in a table?",
+     "options": {"A": "Foreign key", "B": "Primary key", "C": "Index", "D": "Column name"}, "correct_answer": "B",
+     "explanation": "A primary key is a unique, non-null identifier for every row."},
+    {"difficulty": "intermediate", "concept": "one-to-many / many-to-many", "question": "How is a many-to-many relationship usually modeled?",
+     "options": {"A": "A single column with comma-separated IDs", "B": "A junction (association) table with two foreign keys", "C": "Duplicating rows in both tables", "D": "It cannot be modeled"}, "correct_answer": "B",
+     "explanation": "A junction table holds pairs of foreign keys, one row per relationship."},
+    {"difficulty": "advanced", "concept": "normalization (1NF-3NF)", "question": "A table violates 3NF when:",
+     "options": {"A": "It has a composite primary key", "B": "A non-key column depends on another non-key column", "C": "It has more than 10 columns", "D": "It contains NULL values"}, "correct_answer": "B",
+     "explanation": "3NF forbids transitive dependencies: non-key attributes must depend only on the key."}
+  ],
+  "sql-querying": [
+    {"difficulty": "beginner", "concept": "SELECT/WHERE", "question": "Which clause filters rows before grouping?",
+     "options": {"A": "HAVING", "B": "WHERE", "C": "ORDER BY", "D": "LIMIT"}, "correct_answer": "B",
+     "explanation": "WHERE filters individual rows; HAVING filters groups after GROUP BY."},
+    {"difficulty": "intermediate", "concept": "JOIN types", "question": "A LEFT JOIN returns:",
+     "options": {"A": "Only matching rows", "B": "All rows from the left table plus matches from the right (NULL if none)", "C": "All rows from both tables", "D": "Only non-matching rows"}, "correct_answer": "B",
+     "explanation": "LEFT JOIN keeps every left-table row and fills unmatched right columns with NULL."},
+    {"difficulty": "advanced", "concept": "window functions", "question": "What does ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) compute?",
+     "options": {"A": "Total salary per department", "B": "A rank of each employee's salary within their department", "C": "The number of departments", "D": "The average salary"}, "correct_answer": "B",
+     "explanation": "The window restarts numbering for each department and orders by salary, giving a per-department ranking."}
+  ],
+  "statistics": [
+    {"difficulty": "beginner", "concept": "mean/median/variance", "question": "Which measure is most robust to outliers?",
+     "options": {"A": "Mean", "B": "Median", "C": "Range", "D": "Variance"}, "correct_answer": "B",
+     "explanation": "The median depends only on the middle value(s), so extreme values barely affect it."},
+    {"difficulty": "intermediate", "concept": "normal distribution", "question": "About what percentage of a normal distribution lies within 2 standard deviations of the mean?",
+     "options": {"A": "50%", "B": "68%", "C": "95%", "D": "99.7%"}, "correct_answer": "C",
+     "explanation": "By the 68-95-99.7 rule, roughly 95% of values fall within ±2σ."},
+    {"difficulty": "advanced", "concept": "hypothesis tests and p-values", "question": "A p-value of 0.03 means:",
+     "options": {"A": "There is a 3% chance the null hypothesis is true", "B": "If the null hypothesis were true, data this extreme would occur about 3% of the time", "C": "The effect size is 3%", "D": "The alternative is 97% likely"}, "correct_answer": "B",
+     "explanation": "A p-value is the probability of observing data at least this extreme assuming the null hypothesis holds."}
+  ],
+  "numpy-pandas": [
+    {"difficulty": "beginner", "concept": "ndarray and broadcasting", "question": "What is np.array([1, 2, 3]) * 2?",
+     "options": {"A": "[1, 2, 3, 1, 2, 3]", "B": "array([2, 4, 6])", "C": "Error", "D": "6"}, "correct_answer": "B",
+     "explanation": "NumPy applies arithmetic element-wise, unlike Python lists which repeat."},
+    {"difficulty": "intermediate", "concept": "DataFrame indexing", "question": "What is the difference between df.loc and df.iloc?",
+     "options": {"A": "loc is label-based, iloc is integer-position-based", "B": "They are identical", "C": "loc is faster", "D": "iloc only works on columns"}, "correct_answer": "A",
+     "explanation": "loc selects by index/column labels; iloc selects by integer positions."},
+    {"difficulty": "advanced", "concept": "groupby/aggregate", "question": "df.groupby('city')['sales'].transform('mean') returns:",
+     "options": {"A": "One row per city", "B": "A Series aligned to df where each row holds its city's mean sales", "C": "The overall mean", "D": "A pivot table"}, "correct_answer": "B",
+     "explanation": "transform broadcasts the group result back to the original shape, unlike agg which reduces it."}
+  ],
+  "ml-basics": [
+    {"difficulty": "beginner", "concept": "supervised vs unsupervised", "question": "Which task is unsupervised learning?",
+     "options": {"A": "Predicting house prices", "B": "Classifying spam emails", "C": "Clustering customers by behavior", "D": "Detecting cats in labeled photos"}, "correct_answer": "C",
+     "explanation": "Clustering finds structure without labels; the others learn from labeled examples."},
+    {"difficulty": "intermediate", "concept": "overfitting", "question": "Training accuracy 99%, test accuracy 62% most likely indicates:",
+     "options": {"A": "Underfitting", "B": "Overfitting", "C": "Data leakage", "D": "A perfect model"}, "correct_answer": "B",
+     "explanation": "A large gap between training and test performance means the model memorized the training data."},
+    {"difficulty": "advanced", "concept": "train/test split", "question": "Why must a StandardScaler be fit only on the training split?",
+     "options": {"A": "It is faster", "B": "Fitting on all data leaks test-set statistics into training", "C": "Scalers cannot handle test data", "D": "It changes the labels"}, "correct_answer": "B",
+     "explanation": "Using test statistics during preprocessing leaks information and inflates evaluation scores."}
+  ],
+  "model-evaluation": [
+    {"difficulty": "beginner", "concept": "accuracy/precision/recall/F1", "question": "Recall measures:",
+     "options": {"A": "TP / (TP + FP)", "B": "TP / (TP + FN)", "C": "(TP + TN) / total", "D": "FP / (FP + TN)"}, "correct_answer": "B",
+     "explanation": "Recall is the fraction of actual positives that the model found."},
+    {"difficulty": "intermediate", "concept": "cross-validation", "question": "What is the main benefit of k-fold cross-validation?",
+     "options": {"A": "It trains faster", "B": "It gives a more reliable performance estimate using every sample for validation once", "C": "It removes the need for a test set", "D": "It prevents all overfitting"}, "correct_answer": "B",
+     "explanation": "Rotating validation folds reduces the variance of the performance estimate."},
+    {"difficulty": "advanced", "concept": "ROC-AUC", "question": "On a dataset with 1% positives, which metric is most informative?",
+     "options": {"A": "Accuracy", "B": "Precision-recall AUC", "C": "Mean squared error", "D": "R-squared"}, "correct_answer": "B",
+     "explanation": "With heavy class imbalance accuracy is misleading; PR-AUC focuses on the rare positive class."}
+  ],
+  "neural-networks": [
+    {"difficulty": "beginner", "concept": "activation functions", "question": "Why do neural networks need non-linear activation functions?",
+     "options": {"A": "To speed up training", "B": "Without them, stacked layers collapse into a single linear function", "C": "To reduce memory", "D": "To normalize inputs"}, "correct_answer": "B",
+     "explanation": "A composition of linear layers is still linear; non-linearities let networks model complex functions."},
+    {"difficulty": "intermediate", "concept": "backpropagation", "question": "Backpropagation computes gradients using:",
+     "options": {"A": "Random search", "B": "The chain rule of calculus", "C": "Matrix inversion", "D": "Genetic algorithms"}, "correct_answer": "B",
+     "explanation": "Gradients flow backwards layer by layer by repeatedly applying the chain rule."},
+    {"difficulty": "advanced", "concept": "gradient descent variants", "question": "What problem do residual connections mainly address in deep networks?",
+     "options": {"A": "Overfitting", "B": "Vanishing gradients in very deep stacks", "C": "Class imbalance", "D": "Slow data loading"}, "correct_answer": "B",
+     "explanation": "Skip connections give gradients a direct path backward, making very deep networks trainable."}
+  ],
+  "deep-learning-pytorch": [
+    {"difficulty": "beginner", "concept": "training loop", "question": "Why call optimizer.zero_grad() each iteration?",
+     "options": {"A": "To reset model weights", "B": "Because PyTorch accumulates gradients by default", "C": "To move tensors to the GPU", "D": "To free the dataset"}, "correct_answer": "B",
+     "explanation": ".backward() adds to existing .grad values, so stale gradients must be cleared each step."},
+    {"difficulty": "intermediate", "concept": "nn.Module", "question": "What do model.train() and model.eval() change?",
+     "options": {"A": "The learning rate", "B": "The behaviour of layers like Dropout and BatchNorm", "C": "Whether gradients exist", "D": "The device"}, "correct_answer": "B",
+     "explanation": "They toggle training-specific behavior; disabling gradients requires torch.no_grad()."},
+    {"difficulty": "advanced", "concept": "GPU / mixed precision", "question": "What is the main benefit of bf16 autocast on modern GPUs?",
+     "options": {"A": "Higher numerical precision", "B": "Faster tensor-core math and lower memory with fp32-like range", "C": "It removes the need for an optimizer", "D": "It makes models deterministic"}, "correct_answer": "B",
+     "explanation": "bfloat16 keeps fp32's exponent range while halving memory traffic and using tensor cores."}
+  ],
+  "nlp-transformers": [
+    {"difficulty": "beginner", "concept": "tokenization", "question": "What does a tokenizer do?",
+     "options": {"A": "Trains the model", "B": "Splits text into units and maps them to integer IDs", "C": "Translates languages", "D": "Removes stop words only"}, "correct_answer": "B",
+     "explanation": "Tokenizers convert raw text into token IDs the model can embed."},
+    {"difficulty": "intermediate", "concept": "self-attention", "question": "In self-attention, attention weights are computed from:",
+     "options": {"A": "Queries and keys", "B": "Values only", "C": "Labels", "D": "Positional encodings only"}, "correct_answer": "A",
+     "explanation": "Weights are softmax(QKᵀ/√d); they then form a weighted sum of the values."},
+    {"difficulty": "advanced", "concept": "encoder vs decoder", "question": "Why do GPT-style decoders use a causal attention mask?",
+     "options": {"A": "To save memory", "B": "So each position cannot attend to future tokens during next-token prediction", "C": "To support longer contexts", "D": "To ignore padding only"}, "correct_answer": "B",
+     "explanation": "The causal mask prevents information leaking from future tokens during autoregressive training."}
+  ],
+  "llm-agents": [
+    {"difficulty": "beginner", "concept": "retrieval-augmented generation", "question": "What is the main goal of RAG?",
+     "options": {"A": "To fine-tune the model", "B": "To ground answers in retrieved documents supplied at query time", "C": "To compress the model", "D": "To generate images"}, "correct_answer": "B",
+     "explanation": "RAG retrieves relevant context and adds it to the prompt so answers are grounded and current."},
+    {"difficulty": "intermediate", "concept": "tool/function calling", "question": "In tool calling, who actually executes the tool?",
+     "options": {"A": "The LLM itself", "B": "The application, after the model emits a structured tool request", "C": "The tokenizer", "D": "The user manually"}, "correct_answer": "B",
+     "explanation": "The model only proposes a call with arguments; your code runs it and returns the result."},
+    {"difficulty": "advanced", "concept": "agent graphs (LangGraph)", "question": "What does a LangGraph checkpointer provide?",
+     "options": {"A": "Faster tokenization", "B": "Persisted graph state per thread, enabling memory, resumption and human-in-the-loop", "C": "Model quantization", "D": "Automatic prompt writing"}, "correct_answer": "B",
+     "explanation": "Checkpointers save state after each step so conversations and workflows can resume from where they left off."}
+  ]
+}

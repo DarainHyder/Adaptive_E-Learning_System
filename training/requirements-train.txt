@@ -1,0 +1,6 @@
+# Training-only dependencies (torch is installed separately from the CUDA wheel index, see environment.yml)
+scikit-learn==1.9.1
+onnx==1.23.1
+onnxscript
+pytest
+playwright

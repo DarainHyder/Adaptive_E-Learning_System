@@ -1,192 +1,119 @@
-import json
 """
-Assessment Agent - Autonomous quiz generation and evaluation
+AssessmentAgent
+  decide (plan_quiz):   choose quiz length and difficulty mix so predicted success ~= target
+                        ("desirable difficulty"), using the KT model's per-difficulty predictions
+  act (assemble_quiz):  draw questions from the bank (no LLM), preferring unseen, well-calibrated items
+  generate_questions:   only when the bank runs short — ONE structured LLM call, validated + deduplicated,
+                        then loop back to assemble (a LangGraph cycle, max 2 rounds)
+  finalize_quiz:        top-up from already-seen items if still short, then build the payload
 """
-from .base_agent import BaseAgent
-from llm_service import LLMService
-from agent_knowledge.rules.assessment_rules import AssessmentRuleEngine
-from agent_communication.message_bus import AgentMessageBus
-from datetime import datetime
+import math
+import random
 
-class AssessmentAgent(BaseAgent):
-    """
-    Autonomous agent responsible for:
-    - Generating adaptive quizzes
-    - Evaluating answers
-    - Adjusting question difficulty
-    - Providing detailed feedback
-    """
-    
-    def __init__(self):
-        super().__init__("AA-001", "AssessmentAgent")
-        self.llm_service = LLMService()
-        self.rule_engine = AssessmentRuleEngine()
-        self.message_bus = AgentMessageBus()
-        self.quizzes_generated = 0
-        self.questions_evaluated = 0
-        self.difficulty_adjustments = 0
-        
-    def perceive(self, student_state):
-        """
-        Perceive student's quiz context
-        
-        Args:
-            student_state: object with student's current state (e.g., knowledge_level)
-        """
-        self.update_state("perceiving")
-        self.log(f"Perceiving assessment needs for user {student_state.user_id}")
-        
-        self.user_id = student_state.user_id
-        self.topic_id = student_state.topic_id
-        self.knowledge_level = student_state.knowledge_level
-        self.recent_performance = student_state.recent_performance
-        self.quiz_type = student_state.quiz_type
-        
-        # Logic to determine number of questions could be more dynamic
-        self.num_questions = 3 if self.knowledge_level < 0.5 else 5
-        return self.state
-    
-    def decide(self):
-        """
-        Autonomous decisions:
-        - What difficulty level for questions?
-        - How many questions?
-        - Question types (MCQ, coding, etc.)
-        - Focus areas
-        """
-        self.update_state("deciding")
-        
-        # Decide on the mix of questions (difficulty, type)
-        self.question_mix = self.rule_engine.select_question_types(
-            self.knowledge_level, 
-            "intermediate" # topic difficulty placeholder
-        )
-        self.log(f"Decided question mix: {self.question_mix}")
-        return self
-    
-    def act(self, topic, prompt=None):
-        """
-        Execute: Generate adaptive quiz
-        """
-        self.update_state("acting")
-        self.log(f"Generating quiz for topic: {topic.name}")
-        
-        if not topic:
-            self.log("Topic not found", "error")
-            return {"error": "Topic not found"}
-        
-        questions = []
-        try:
-            # 1. Try to generate questions from templates first (Rule-Based)
-            for difficulty, count in self.question_mix.items():
-                for _ in range(count):
-                    template = self.rule_engine.get_template_for_topic(topic.name, difficulty)
-                    if template:
-                        # Use LLM just to fill the template (cheaper/faster than full gen)
-                        # In future, fetch from ContentLibrary DB directly
-                        q_prompt = self.rule_engine.formulate_question_prompt(
-                            template, topic.name, difficulty
-                        )
-                        # We still use LLM service but with a very specific prompt
-                        # This bridges the gap until we have a full static DB
-                        generated = self.llm_service.generate_quiz_with_prompt(
-                            topic.name, 1, custom_prompt=q_prompt
-                        )
-                        if generated:
-                             questions.extend(generated)
-            
-            # 2. Fallback or Fill remaining
-            if len(questions) < self.num_questions:
-                needed = self.num_questions - len(questions)
-                self.log(f"Template generation insufficient, requesting {needed} from LLM fallback.")
-                fallback_qs = self.llm_service.generate_quiz_with_prompt(
-                    topic.name, needed, custom_prompt=prompt
-                )
-                if fallback_qs:
-                    questions.extend(fallback_qs)
+from langchain_core.messages import HumanMessage, SystemMessage
 
-            # 3. Notify Knowledge Agent of new assessment (simulated)
-            # self.message_bus.send_message(...)
-            
-            self.quizzes_generated += 1
-            self.log(f"Quiz generated successfully (Total: {self.quizzes_generated})")
-            
-            # Store in memory
-            self.memory.append({
-                "action": "quiz_generated",
-                "topic": topic.name,
-                "num_questions": self.num_questions,
-                "difficulty_mix": self.difficulty_mix,
-                "user_id": self.user_id
-            })
-            
-            self.update_state("completed")
-            
-            return {
-                "questions": quiz_questions,
-                "metadata": {
-                    "difficulty_mix": self.difficulty_mix,
-                    "focus_areas": self.focus_areas,
-                    "agent": self.name,
-                    "generated_at": datetime.utcnow().isoformat()
-                }
-            }
-            
-        except Exception as e:
-            self.log(f"Error generating quiz: {str(e)}", "error")
-            self.update_state("error")
-            return {"error": str(e)}
-    
-    def evaluate_answer(self, question, user_answer, correct_answer, context):
-        """
-        Autonomous answer evaluation with detailed feedback
-        
-        Args:
-            question: str
-            user_answer: str
-            correct_answer: str
-            context: dict with topic info
-        """
-        self.update_state("evaluating")
-        self.log(f"Evaluating answer: {user_answer} vs {correct_answer}")
-        
-        is_correct = user_answer == correct_answer
-        self.questions_evaluated += 1
-        
-        # Generate intelligent feedback
-        feedback_prompt = f"""
-        Question: {question}
-        Student answered: {user_answer}
-        Correct answer: {correct_answer}
-        Result: {"Correct" if is_correct else "Incorrect"}
-        
-        Provide encouraging, educational feedback (2-3 sentences):
-        1. If correct: Explain why and reinforce the concept
-        2. If incorrect: Explain the misconception and guide to correct understanding
-        
-        Be supportive and educational.
-        """
-        
-        try:
-            feedback = self.llm_service.model.generate_content(feedback_prompt).text
-        except:
-            feedback = "Review the concept and try again!" if not is_correct else "Great job!"
-        
-        self.log(f"Answer evaluated. Correct: {is_correct}")
-        
-        return {
-            "is_correct": is_correct,
-            "feedback": feedback,
-            "agent": self.name,
-            "evaluated_at": datetime.utcnow().isoformat()
-        }
-    
-    def get_statistics(self):
-        """Return agent statistics"""
-        return {
-            "agent": self.name,
-            "quizzes_generated": self.quizzes_generated,
-            "questions_evaluated": self.questions_evaluated,
-            "state": self.state,
-            "memory_size": len(self.memory)
-        }
+from models import QuestionBank, Topic, db
+from services import content
+
+from .metrics import tracked
+from .schemas import Quiz
+
+MAX_GENERATION_ROUNDS = 2
+EXTRA_QUESTIONS = 3  # grow the bank a little beyond the immediate shortfall
+
+
+def allocate(weights, n):
+    """Largest-remainder allocation of n slots proportional to weights."""
+    total = sum(weights.values()) or 1.0
+    raw = {k: n * w / total for k, w in weights.items()}
+    alloc = {k: int(math.floor(v)) for k, v in raw.items()}
+    for k in sorted(raw, key=lambda k: raw[k] - alloc[k], reverse=True)[: n - sum(alloc.values())]:
+        alloc[k] += 1
+    return alloc
+
+
+def make_nodes(ctx):
+    cfg = ctx.config
+
+    @tracked('assessment')
+    def plan_quiz(state):
+        tp = state['profile']['topics'].get(state['topic_id'], {})
+        pred = tp.get('predicted_success') or {'beginner': 0.7, 'intermediate': 0.55, 'advanced': 0.4}
+        practice = tp.get('practice_count', 0)
+        n = cfg.QUIZ_SIZE_MIN if practice < 5 else (cfg.QUIZ_SIZE_MAX if tp.get('effective_mastery', 0) > 0.7 else 5)
+        target = cfg.TARGET_SUCCESS_RATE
+        # Relative weighting: the difficulty whose predicted success is closest to the target dominates,
+        # even when every level is far from it (e.g. a brand-new learner).
+        closest = min(abs(p - target) for p in pred.values())
+        weights = {d: math.exp(-(abs(p - target) - closest) / 0.07) for d, p in pred.items()}
+        mix = allocate(weights, n)
+        expected = sum(pred[d] * c for d, c in mix.items()) / n
+        return {'quiz_plan': {'num_questions': n, 'difficulty_mix': mix, 'target_success': target,
+                              'expected_success': round(expected, 3), 'predicted_success': pred},
+                'generation_rounds': state.get('generation_rounds', 0)}
+
+    @tracked('assessment')
+    def assemble_quiz(state):
+        plan = state['quiz_plan']
+        rows, shortfall = content.pick_questions(state['user_id'], state['topic_id'], plan['difficulty_mix'],
+                                                 target_p=plan['target_success'])
+        return {'quiz': {'question_ids': [q.id for q in rows], 'shortfall': shortfall}}
+
+    def _generation_prompt(topic, shortfall, profile):
+        existing = [q.question for q in QuestionBank.query.filter_by(topic_id=topic.id).limit(40)]
+        weak = [w['name'] for w in profile.get('weak_topics', [])][:3]
+        templates = '\n'.join(f"- {t['id']} ({t['cognitive_level']}): {t['pattern'].splitlines()[0]}"
+                              for t in ctx.question_templates)
+        wanted = ', '.join(f'{c} {d}' for d, c in shortfall.items())
+        total = sum(shortfall.values()) + EXTRA_QUESTIONS
+        return [
+            SystemMessage('You are an assessment designer who writes unambiguous multiple-choice questions '
+                          'with exactly one correct answer and plausible distractors based on common misconceptions.'),
+            HumanMessage(
+                f"Write {total} multiple-choice questions on '{topic.name}': {topic.description}\n"
+                f"Difficulty counts needed: {wanted} (put the {EXTRA_QUESTIONS} extra at intermediate).\n"
+                f"Cover these concepts, spreading questions across them: {', '.join(topic.key_concepts or [])}.\n"
+                f"Vary question types using these templates:\n{templates}\n"
+                f"The learner is currently weak in: {', '.join(weak) or 'n/a'}.\n"
+                f"Do NOT repeat or paraphrase any of these existing questions:\n"
+                + '\n'.join(f'- {q}' for q in existing[:30])
+                + '\nRandomise which letter is correct. Keep code snippets short and put them inside the question text.'
+            ),
+        ]
+
+    @tracked('assessment')
+    def generate_questions(state):
+        topic = db.session.get(Topic, state['topic_id'])
+        rounds = state.get('generation_rounds', 0) + 1
+        result = ctx.llm.structured(Quiz, _generation_prompt(topic, state['quiz']['shortfall'], state['profile']))
+        if result is None:
+            return {'generation_rounds': MAX_GENERATION_ROUNDS, 'errors': ['question_generation_failed']}
+        added = content.add_questions(topic.id, [q.model_dump() for q in result.questions], source='llm')
+        return {'generation_rounds': rounds if added else MAX_GENERATION_ROUNDS}
+
+    @tracked('assessment')
+    def finalize_quiz(state):
+        plan, quiz = state['quiz_plan'], state['quiz']
+        ids = list(quiz['question_ids'])
+        missing = plan['num_questions'] - len(ids)
+        if missing > 0:
+            ids += [q.id for q in content.fill_from_any(state['user_id'], state['topic_id'], set(ids), missing)]
+        rows = {q.id: q for q in QuestionBank.query.filter(QuestionBank.id.in_(ids)).all()} if ids else {}
+        ordered = [rows[i] for i in ids if i in rows]
+        order = {'beginner': 0, 'intermediate': 1, 'advanced': 2}
+        ordered.sort(key=lambda q: (order.get(q.difficulty, 1), random.random()))  # warm-up first
+        for q in ordered:
+            q.times_served = (q.times_served or 0) + 1
+        return {'quiz': {'questions': [q.to_public_dict() for q in ordered],
+                         'metadata': {**plan, 'from_bank': len(quiz['question_ids']),
+                                      'generation_rounds': state.get('generation_rounds', 0)}}}
+
+    def route_after_assemble(state):
+        short = state['quiz'].get('shortfall')
+        if short and ctx.llm.available and state.get('generation_rounds', 0) < MAX_GENERATION_ROUNDS:
+            return 'generate_questions'
+        return 'finalize_quiz'
+
+    nodes = {'plan_quiz': plan_quiz, 'assemble_quiz': assemble_quiz,
+             'generate_questions': generate_questions, 'finalize_quiz': finalize_quiz}
+    return nodes, route_after_assemble

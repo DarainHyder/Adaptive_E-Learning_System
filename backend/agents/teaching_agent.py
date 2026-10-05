@@ -1,147 +1,114 @@
 """
-Teaching Agent - Autonomous content generation and delivery
+TeachingAgent
+  decide: pick a pedagogical strategy = expert rules (prior) + Thompson-sampling bandit (learned)
+  act:    produce a structured lesson (LLM structured output), reusing cached variants to save calls
 """
-import json
-from .base_agent import BaseAgent
-from llm_service import LLMService
-from agent_knowledge.rules.teaching_rules import TeachingRuleEngine
-from agent_communication.message_bus import AgentMessageBus
-from agent_communication.protocols import MessageProtocols
-from datetime import datetime
 import random
 
+from langchain_core.messages import HumanMessage, SystemMessage
 
-class TeachingAgent(BaseAgent):
-    """
-    Autonomous agent responsible for:
-    - Generating personalized lessons
-    - Adapting teaching style
-    - Selecting examples based on student performance
-    """
-    
-    def __init__(self):
-        super().__init__("TA-001", "TeachingAgent")
-        self.llm_service = LLMService()
-        self.rule_engine = TeachingRuleEngine()
-        self.message_bus = AgentMessageBus()
-        self.lessons_generated = 0
-        self.knowledge_level = 0.0
-        self.learning_style = "visual"
-        self.lesson_complexity = "beginner"
-        self.current_strategy = {}
-        
-    def perceive(self, student_state):
-        self.update_state("perceiving")
-        self.log(f"Perceiving student state for user {student_state.user_id}")
-        
-        # Update internal state based on student data
-        self.user_id = student_state.user_id
-        self.knowledge_level = student_state.knowledge_level
-        self.learning_style = student_state.learning_style or "visual"
-        
-        # Determine lesson complexity based on knowledge level
-        if self.knowledge_level < 0.3:
-            self.lesson_complexity = "beginner"
-        elif self.knowledge_level < 0.7:
-            self.lesson_complexity = "intermediate"
-        else:
-            self.lesson_complexity = "advanced"
-        
-        self.update_state("perceived")
-        return self.state
-    
-    def decide(self):
-        self.update_state("deciding")
-        
-        # Use rule engine to determine strategy
-        student_profile = {
-            "knowledge_level": self.knowledge_level,
-            "learning_style": self.learning_style,
-            # Mock recent performance for now, ideally comes from KnowledgeAgent
-            "recent_performance": 0.8 
-        }
-        
-        self.current_strategy = self.rule_engine.select_teaching_strategy(student_profile)
-        self.log(f"Selected teaching strategy: {self.current_strategy['name']}")
-        
-        self.update_state("decided")
-        return self
-    
-    def act(self, topic, prompt=None):
-        self.update_state("acting")
-        self.log(f"Generating lesson for topic: {topic.name} with strategy {self.current_strategy['name']}")
-        
-        # 1. Request updated profile from KnowledgeAgent (Async/Simulated)
-        self.message_bus.send_message(
-            self.name, 
-            "KnowledgeAgent", 
-            MessageProtocols.KNOWLEDGE_REQUEST, 
-            MessageProtocols.request_student_profile(self.user_id, topic.id)
-        )
+from models import Topic, db
+from services import content
+from services.sandbox import ALLOWED_IMPORTS
 
-        try:
-            # 2. Generate Lesson Structure using Rule Engine (No LLM)
-            lesson_structure = self.rule_engine.generate_lesson_structure(topic, self.current_strategy)
-            
-            # 3. Fill in content (Hybrid: Try Templates first, else Fallback to LLM for specific sections)
-            # For this MVP, we will use the structure to guide the LLM, reducing its "thinking" time
-            # In a full impl, we would pull pre-written content from ContentLibrary
-            
-            structured_prompt = f"""
-            Create a lesson for topic '{topic.name}' ({topic.difficulty}) following this structure:
-            
-            Strategy: {self.current_strategy['name']} ({self.current_strategy['description']})
-            
-            Sections:
-            """
-            
-            for section in lesson_structure['sections']:
-                structured_prompt += f"\n- {section['title']}: {section['instruction_for_llm']}"
-            
-            # Fallback to LLM for content generation but with strict structure
-            lesson_content = self.llm_service.generate_lesson_with_prompt(
-                topic.name,
-                topic.difficulty,
-                self.knowledge_level,
-                custom_prompt=structured_prompt
-            )
-            
-            self.lessons_generated += 1
-            self.log(f"Lesson generated successfully using rule-guided structure. (Total: {self.lessons_generated})")
-            
-            # Store in agent memory
-            self.memory.append({
-                "action": "lesson_generated",
-                "topic": topic.name,
-                "strategy": self.current_strategy['name'],
-                "complexity": self.lesson_complexity,
-                "user_id": self.user_id
-            })
-            
-            self.update_state("completed")
-            
-            return {
-                "content": lesson_content,
-                "metadata": {
-                    "teaching_style": self.current_strategy.get('name', 'default'),
-                    "complexity": self.lesson_complexity,
-                    "example_count": self.current_strategy.get('example_count', 3),
-                    "agent": self.name,
-                    "generated_at": datetime.utcnow().isoformat()
-                }
-            }
-            
-        except Exception as e:
-            self.log(f"Error generating lesson: {str(e)}", "error")
-            self.update_state("error")
-            return {"error": str(e)}
-    
-    def get_statistics(self):
-        """Return agent statistics"""
-        return {
-            "agent": self.name,
-            "lessons_generated": self.lessons_generated,
-            "current_style": self.current_style,
-            "state": self.state,
-            "memory_size": len(self.memory)
-        }
+from .metrics import tracked
+from .schemas import Lesson
+
+SYSTEM = (
+    'You are an expert instructor who writes concise, accurate, engaging lessons for an adaptive '
+    'e-learning platform. Adapt depth and pacing to the learner profile you are given. '
+    'Use Markdown inside section bodies. Code must be correct and runnable.'
+)
+
+
+def complexity_for(knowledge):
+    if knowledge < 0.3:
+        return 'beginner'
+    if knowledge < 0.7:
+        return 'intermediate'
+    return 'advanced'
+
+
+def make_nodes(ctx):
+    @tracked('teaching')
+    def select_strategy(state):
+        topic_id = state['topic_id']
+        tp = state['profile']['topics'].get(topic_id, {})
+        knowledge = tp.get('effective_mastery', 0.0)
+        style = state.get('request', {}).get('learning_style', 'mixed')
+        accuracy = tp.get('accuracy')
+        rule = ctx.teaching_rules.select_teaching_strategy({
+            'knowledge_level': knowledge,
+            'learning_style': style,
+            'recent_performance': accuracy if accuracy is not None else 1.0,
+        }) or ctx.teaching_rules.strategies[0]
+        name, bucket, samples = ctx.bandit.select(knowledge, rule_choice=rule['name'])
+        chosen = ctx.teaching_rules._find_strategy(name) or rule
+        return {'strategy': {
+            'name': name,
+            'description': chosen.get('description', ''),
+            'lesson_structure': chosen.get('lesson_structure', {}),
+            'rule_choice': rule['name'],
+            'bucket': bucket,
+            'bandit_samples': {k: round(v, 3) for k, v in samples.items()},
+            'complexity': complexity_for(knowledge),
+            'knowledge_level': knowledge,
+        }}
+
+    def _prompt(topic, strategy, profile, request):
+        tp = profile['topics'].get(topic.id, {})
+        weak_prereqs = [profile['topics'][p]['name'] for p in topic.prerequisite_ids
+                        if p in profile['topics'] and profile['topics'][p]['effective_mastery'] < 0.5]
+        structure = ctx.teaching_rules.generate_lesson_structure(topic, {'name': strategy['name'],
+                                                                         'lesson_structure': strategy['lesson_structure']})
+        plan = '\n'.join(f"- {s['title']}: {s['instruction_for_llm'].replace('_', ' ')}" for s in structure['sections'])
+        goals = ', '.join(request.get('goals') or []) or 'not specified'
+        return [
+            SystemMessage(SYSTEM),
+            HumanMessage(
+                f"Write a lesson on **{topic.name}** ({topic.category}).\n"
+                f"Topic description: {topic.description}\n"
+                f"Key concepts to cover: {', '.join(topic.key_concepts or [])}\n\n"
+                f"Learner profile:\n"
+                f"- current mastery: {tp.get('effective_mastery', 0):.0%} (target level: {strategy['complexity']})\n"
+                f"- predicted success on intermediate questions: {tp.get('predicted_success', {}).get('intermediate', 0.5):.0%}\n"
+                f"- learning style: {request.get('learning_style', 'mixed')}; goals: {goals}\n"
+                f"- prerequisites still weak: {', '.join(weak_prereqs) or 'none'} (briefly recap these first if any)\n\n"
+                f"Pedagogical strategy: {strategy['name']} - {strategy['description']}\n"
+                f"Follow this section plan:\n{plan}\n\n"
+                f"Requirements: 3-6 sections; 1-3 code examples; 3-5 key takeaways; one practice challenge whose "
+                f"starter code runs in plain Python and only imports from: {', '.join(sorted(ALLOWED_IMPORTS))}. "
+                f"If the topic is not Python-specific, make the challenge a Python simulation of the idea. "
+                f"Target length ~{structure['metadata']['estimated_time'].split()[0]} minutes of reading."
+            ),
+        ]
+
+    @tracked('teaching')
+    def teach(state):
+        topic = db.session.get(Topic, state['topic_id'])
+        strategy = state['strategy']
+        request = state.get('request', {})
+        key = content.lesson_cache_key(topic.id, strategy['complexity'], strategy['name'])
+        cached = content.cached_lessons(key)
+        limit = ctx.config.LESSON_CACHE_VARIANTS
+
+        if cached and (len(cached) >= limit or not ctx.llm.available) and not request.get('fresh'):
+            row = random.choice(cached)
+            row.usage_count = (row.usage_count or 0) + 1
+            return {'lesson': {'lesson': row.meta_data, 'markdown': row.content, 'source': 'cache'}}
+
+        result = ctx.llm.structured(Lesson, _prompt(topic, strategy, state['profile'], request))
+        if result is not None:
+            lesson = result.model_dump()
+            md = content.lesson_to_markdown(lesson)
+            content.store_lesson(key, topic.id, strategy['complexity'], lesson, md)
+            return {'lesson': {'lesson': lesson, 'markdown': md, 'source': 'llm'}}
+
+        if cached:
+            row = random.choice(cached)
+            return {'lesson': {'lesson': row.meta_data, 'markdown': row.content, 'source': 'cache'}}
+        lesson = content.offline_lesson(topic, strategy['complexity'], strategy['name'])
+        return {'lesson': {'lesson': lesson, 'markdown': content.lesson_to_markdown(lesson), 'source': 'offline'},
+                'errors': ['llm_unavailable'] if ctx.llm.available else []}
+
+    return {'select_strategy': select_strategy, 'teach': teach}

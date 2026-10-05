@@ -59,3 +59,9 @@ yarn-error.log*
 
 # Misc
 output.txt
+
+# Training artefacts (downloaded data, logs, sweep results)
+training/data_cache/
+training/logs/
+training/results/*_sweep_*.json
+backend/tests/__pycache__/
